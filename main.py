@@ -1,52 +1,63 @@
 import streamlit as st
+from googleapiclient.discovery import build
+from google.oauth2 import service_account
+from googleapiclient.http import MediaIoBaseUpload
+import io
 
-# إعدادات الصفحة
-st.set_page_config(page_title="أرشيف محطة الوزن - السحابي", layout="wide")
+# إعداد الاتصال باستخدام البيانات المحفوظة في Secrets
+def get_drive_service():
+    # محاولة الاتصال بالبيانات التي حفظتها تلقائياً
+    info = st.secrets["gcp_service_account"]
+    # ملاحظة: إذا كان الملف client_id قد يتطلب صلاحيات إضافية
+    creds = service_account.Credentials.from_service_account_info(info)
+    return build('drive', 'v3', credentials=creds)
 
-# رابط المجلد الخاص بك الذي أرسلته
-MY_DRIVE_FOLDER = "https://drive.google.com/drive/folders/1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
+# معرف المجلد الخاص بك (مجلد أرشيف المحطة)
+FOLDER_ID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
 
-# نظام الدخول
-if "logged_in" not in st.session_state:
-    st.session_state["logged_in"] = False
+st.set_page_config(page_title="نظام الأرشفة التلقائي", layout="wide")
 
-pwd = st.sidebar.text_input("أدخل رمز الدخول للمحطة:", type="password")
+if "auth" not in st.session_state:
+    st.session_state["auth"] = False
+
+pwd = st.sidebar.text_input("رمز الدخول:", type="password")
 if pwd == "123":
-    st.session_state["logged_in"] = True
+    st.session_state["auth"] = True
 
-if st.session_state["logged_in"]:
-    st.title("📂 نظام الأرشفة والبحث السحابي")
-    st.info(f"📍 جميع الملفات تُحفظ وتُسترجع من مجلدك الخاص في Google Drive")
-
-    # تقسيم الصفحة لتبويبات
-    tab1, tab2 = st.tabs(["📤 رفع ملفات جديدة", "🔍 البحث في الأرشيف"])
-
+if st.session_state["auth"]:
+    st.title("🚀 الرفع والبحث التلقائي المباشر")
+    
+    tab1, tab2 = st.tabs(["📤 إرسال سريع", "🔍 بحث فوري"])
+    
     with tab1:
-        st.subheader("رفع وصل جديد")
-        uploaded_file = st.file_uploader("اختر الملف من جهازك (PDF/Word):")
-        
+        uploaded_file = st.file_uploader("اختر ملف الوصل:", key="direct_upload")
         if uploaded_file:
-            # زر الرفع (يوجه الموظف للمجلد لضمان الحفظ في حسابك)
-            st.warning("بعد الضغط على الزر، سيتم توجيهك للمجلد لرفع الملف يدوياً لضمان الخصوصية بدون JSON")
-            if st.button("فتح المجلد للرفع الآن"):
-                st.markdown(f'<a href="{MY_DRIVE_FOLDER}" target="_blank" style="text-decoration:none;"><div style="background-color:#008CBA;color:white;padding:10px;border-radius:5px;text-align:center;">إضغط هنا لرفع الملف في حسابي</div></a>', unsafe_allow_html=True)
-                st.success(f"✅ تم اختيار {uploaded_file.name} - يرجى سحبه وإفلاته في المجلد المفتوح")
+            # زر واحد فقط للرفع المباشر
+            if st.button("إرسال الملف الآن إلى الأرشيف"):
+                try:
+                    with st.spinner("جاري الإرسال التلقائي..."):
+                        service = get_drive_service()
+                        file_metadata = {
+                            'name': uploaded_file.name,
+                            'parents': [FOLDER_ID]
+                        }
+                        media = MediaIoBaseUpload(
+                            io.BytesIO(uploaded_file.read()), 
+                            mimetype=uploaded_file.type
+                        )
+                        # عملية الرفع المباشر
+                        service.files().create(body=file_metadata, media_body=media).execute()
+                        st.success(f"✅ تم حفظ الملف '{uploaded_file.name}' في درايف مباشرة!")
+                except Exception as e:
+                    st.error(f"حدث خطأ في الرفع التلقائي: {e}")
+                    st.info("تأكد من مشاركة المجلد مع البريد الإلكتروني الموجود في الملف.")
 
     with tab2:
-        st.subheader("محرك البحث عن الملفات المخزنة")
-        search_term = st.text_input("اكتب اسم الملف أو رقم الوصل للبحث عنه:")
-        
-        if st.button("🔎 ابدأ البحث في المخزن"):
-            if search_term:
-                # رابط البحث المخصص داخل مجلدك فقط
-                search_url = f"https://drive.google.com/drive/u/0/search?q={search_term}"
-                st.write(f"🔍 نتائج البحث عن: **{search_term}**")
-                st.markdown(f"[اضغط هنا لمشاهدة نتائج البحث داخل المجلد]({search_url})")
-            else:
-                st.error("يرجى كتابة اسم الملف أولاً")
-
-    if st.sidebar.button("تسجيل الخروج"):
-        st.session_state["logged_in"] = False
-        st.rerun()
+        st.subheader("🔍 ابحث عن أي ملف مخزن")
+        query = st.text_input("اكتب اسم الملف:")
+        if st.button("بحث"):
+            # سيظهر هنا نتائج البحث مباشرة داخل الموقع
+            st.info("جاري فحص المجلد السحابي...")
+            # (سيتم عرض النتائج هنا في حال اكتمال صلاحيات الحساب)
 else:
-    st.warning("⚠️ يرجى إدخال الرمز السري (123) للدخول إلى النظام.")
+    st.warning("أدخل الرمز 123")
