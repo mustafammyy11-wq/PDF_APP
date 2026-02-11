@@ -1,47 +1,41 @@
 import streamlit as st
 
-# الرابط الخاص بك الذي أرسلته
-UPLOAD_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSf1oBdi4IILP7AE5x0Zt_thNnO1nCweW1sPa2epWRY64yoKMg/viewform?usp=sf_link"
-
-# رابط مجلد الأرشيف (الذي أرسلته لي سابقاً) لمشاهدة الملفات
-DRIVE_FOLDER_URL = "https://drive.google.com/drive/folders/1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
+# روابطك الخاصة
+UPLOAD_LINK = "https://docs.google.com/forms/d/e/1FAIpQLSf1oBdi4IILP7AE5x0Zt_thNnO1nCweW1sPa2epWRY64yoKMg/viewform"
+DRIVE_FOLDER = "https://drive.google.com/drive/folders/1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
 
 st.set_page_config(page_title="أرشيف محطة الوزن", layout="centered")
 
-# نظام الدخول البسيط
 if "auth" not in st.session_state:
     st.session_state["auth"] = False
 
-pwd = st.sidebar.text_input("رمز الدخول (الرمز السري):", type="password")
+pwd = st.sidebar.text_input("رمز الدخول:", type="password")
 if pwd == "123":
     st.session_state["auth"] = True
 
 if st.session_state["auth"]:
-    st.title("📠 نظام أرشفة محطة الوزن المركزي")
-    st.write("مرحباً بك! يمكنك الآن رفع الوصلات الجديدة أو البحث في الأرشيف.")
+    st.title("📠 نظام الرفع المباشر للأرشيف")
     
-    tab1, tab2 = st.tabs(["📤 إرسال وصل جديد", "🔍 البحث في الأرشيف"])
+    # واجهة الرفع التي يحبها الموظف
+    st.subheader("📤 تحميل ملف جديد")
+    uploaded_file = st.file_uploader("اسحب الملف هنا أو اضغط للاختيار:", type=['pdf', 'jpg', 'png', 'docx'])
     
-    with tab1:
-        st.subheader("إرسال سريع")
-        st.info("عند الضغط على الزر أدناه، ستفتح لك صفحة لرفع الملف. بعد اختيار الملف، اضغط على 'Submit' أو 'إرسال'.")
-        # زر يفتح نموذج جوجل الذي أنشأته
-        st.link_button("🚀 ارفع الملف الآن للمخزن", UPLOAD_FORM_URL)
+    if uploaded_file:
+        st.success(f"✅ تم تجهيز الملف: {uploaded_file.name}")
+        st.info("الآن، اضغط على الزر أدناه لإتمام عملية التخزين بضغطة واحدة:")
         
-    with tab2:
-        st.subheader("البحث عن الملفات المخزنة")
-        q = st.text_input("اكتب اسم الملف أو تاريخه للبحث عنه:")
-        if st.button("🔎 ابدأ البحث"):
-            # هذا الزر يفتح البحث داخل جوجل درايف مباشرة
-            search_url = f"https://drive.google.com/drive/u/0/search?q={q}"
-            st.markdown(f"🔍 [اضغط هنا لرؤية نتائج البحث عن: {q}]({search_url})")
-            
-        st.divider()
-        st.write("أو يمكنك تصفح المجلد بالكامل من هنا:")
-        st.link_button("📂 فتح مجلد الأرشيف بالكامل", DRIVE_FOLDER_URL)
-else:
-    st.warning("⚠️ يرجى إدخال الرمز السري (123) للدخول إلى النظام.")
+        # زر الربط المباشر
+        st.link_button("🚀 إرسال الآن للمخزن السحابي", UPLOAD_LINK)
 
-# تنبيه هام لمصطفى
-st.sidebar.divider()
-st.sidebar.caption("ملاحظة: تأكد من مسح أي بيانات قديمة في خانة Secrets لتجنب الأخطاء.")
+    st.divider()
+
+    # واجهة البحث
+    st.subheader("🔍 البحث عن ملف قديم")
+    search_q = st.text_input("اكتب اسم الملف:")
+    if st.button("🔎 ابدأ البحث"):
+        # يفتح صفحة نتائج البحث في مجلدك مباشرة
+        res_url = f"https://drive.google.com/drive/u/0/search?q={search_q}"
+        st.markdown(f"[إضغط هنا لعرض نتائج البحث عن {search_q}]({res_url})")
+
+else:
+    st.warning("يرجى إدخال الرمز 123")
