@@ -4,60 +4,55 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# تعريف المجلد
+# جلب الخدمة
+def get_drive_service():
+    try:
+        info = st.secrets["gcp_service_account"]
+        creds = service_account.Credentials.from_service_account_info(info)
+        return build('drive', 'v3', credentials=creds)
+    except Exception as e:
+        st.error(f"خطأ في ملف الجيسون (Secrets): {e}")
+        return None
+
+st.set_page_config(page_title="أرشيف المحطة", layout="centered")
+
+# تأكد من معرف المجلد هنا
 FOLDER_ID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
 
-def get_drive_service():
-    # جلب البيانات من سيكرتس
-    info = st.secrets["gcp_service_account"]
-    creds = service_account.Credentials.from_service_account_info(info)
-    return build('drive', 'v3', credentials=creds)
-
-st.set_page_config(page_title="أرشيف محطة الوزن المطور", layout="centered")
-
-if "auth" not in st.session_state:
-    st.session_state["auth"] = False
-
-pwd = st.sidebar.text_input("رمز الدخول:", type="password")
-if pwd == "123":
-    st.session_state["auth"] = True
-
-if st.session_state["auth"]:
-    st.title("🏛️ الأرشيف الذكي - رفع وبحث فوري")
-    
+if st.sidebar.text_input("الرمز:", type="password") == "123":
+    st.title("🏛️ الأرشيف الذكي")
     service = get_drive_service()
     
-    tab1, tab2 = st.tabs(["📤 إضافة ملف جديد", "🔍 بحث داخلي"])
-    
-    with tab1:
-        st.subheader("إرسال الوصل إلى الدرايف")
-        up_file = st.file_uploader("اختر الملف:", type=['pdf', 'jpg', 'png'])
-        if up_file:
-            if st.button("تأكيد الرفع الآن"):
-                with st.spinner("جاري الإرسال صمتاً..."):
-                    try:
-                        file_metadata = {'name': up_file.name, 'parents': [FOLDER_ID]}
-                        media = MediaIoBaseUpload(io.BytesIO(up_file.read()), mimetype=up_file.type)
-                        service.files().create(body=file_metadata, media_body=media).execute()
-                        st.success(f"✅ تم الحفظ بنجاح: {up_file.name}")
-                    except Exception as e:
-                        st.error(f"خطأ: تأكد من مشاركة المجلد مع ايميل الحساب الجديد.")
+    if service:
+        # اختبار الاتصال بالمجلد
+        try:
+            folder = service.files().get(fileId=FOLDER_ID, fields='name').execute()
+            st.success(f"✅ متصل بنجاح بمجلد: {folder['name']}")
+        except Exception:
+            st.error("❌ البرمجية لا ترى المجلد. تأكد من مشاركة المجلد مع الايميل كـ Editor.")
+            st.info(f"الايميل المطلوب مشاركته: {st.secrets['gcp_service_account']['client_email']}")
 
-    with tab2:
-        st.subheader("محرك البحث الداخلي")
-        q = st.text_input("اكتب اسم الملف:")
-        if q:
+        # قسم الرفع
+        u_file = st.file_uploader("اختر ملف للرفع:")
+        if u_file and st.button("رفع الآن"):
+            try:
+                file_metadata = {'name': u_file.name, 'parents': [FOLDER_ID]}
+                media = MediaIoBaseUpload(io.BytesIO(u_file.read()), mimetype=u_file.type)
+                service.files().create(body=file_metadata, media_body=media).execute()
+                st.balloons()
+                st.success("تم الرفع بنجاح!")
+            except Exception as e:
+                st.error(f"حدث خطأ أثناء الرفع: {e}")
+
+        # قسم البحث
+        st.divider()
+        search_q = st.text_input("بحث عن ملف:")
+        if search_q:
             results = service.files().list(
-                q=f"'{FOLDER_ID}' in parents and name contains '{q}'",
+                q=f"'{FOLDER_ID}' in parents and name contains '{search_q}'",
                 fields="files(id, name, webViewLink)"
             ).execute()
             items = results.get('files', [])
-            if items:
-                for item in items:
-                    col1, col2 = st.columns([3, 1])
-                    col1.write(f"📄 {item['name']}")
-                    col2.link_button("استعراض", item['webViewLink'])
-            else:
-                st.warning("لم يتم العثور على ملفات.")
-else:
-    st.info("الرجاء إدخال الرمز 123")
+            for item in items:
+                st.write(f"📄 {item['name']}")
+                st.link_button("فتح", item['webViewLink'])
