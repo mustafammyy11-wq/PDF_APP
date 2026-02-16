@@ -4,8 +4,10 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# هذا الرقم استخرجته من صورتك وهو دقيق لمجلدك "الجديد"
+# رقم المجلد من صورك (تأكد أنه صحيح 100%)
 FID = "1-2fiKxjnbAWlIFSNVxxdoqYEa0KuuBmh"
+# بريدك الشخصي (الذي تريد رؤية الملف فيه)
+MY_EMAIL = "mustafarmmyy11@gmail.com" 
 
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
 PK = r"""-----BEGIN PRIVATE KEY-----
@@ -37,7 +39,7 @@ j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
 FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
-st.title("🏛️ نظام الأرشفة النهائي")
+st.title("🏛️ نظام الأرشفة")
 
 if st.sidebar.text_input("الرمز:", type="password") == "123":
     try:
@@ -47,26 +49,24 @@ if st.sidebar.text_input("الرمز:", type="password") == "123":
         })
         service = build('drive', 'v3', credentials=creds)
         
-        up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
-        if up and st.button("🚀 رفع "):
-            with st.spinner("جاري الرفع لمجلدك الشخصي..."):
-                try:
-                    # إعداد الرفع للمجلد المشترك حصراً
-                    meta = {'name': up.name, 'parents': [FID]}
-                    media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
-                    
-                    file = service.files().create(
-                        body=meta, 
-                        media_body=media, 
-                        supportsAllDrives=True,
-                        fields='id, webViewLink'
-                    ).execute()
-                    
-                    st.success("✅ نجح الرفع! الملف الآن داخل مجلدك.")
-                    st.markdown(f"🔗 [اضغط هنا لفتح الملف مباشرة]({file.get('webViewLink')})")
-                    st.balloons()
-                except Exception as e:
-                    st.error(f"فشل الرفع للمجلد. تأكد من مشاركة المجلد مع البريد: {MAIL}")
-                    st.info(f"الخطأ التقني: {e}")
+        up = st.file_uploader("اختر ملف:", type=["pdf"])
+        if up and st.button("🚀 رفع"):
+            with st.spinner("جاري الرفع والمشاركة..."):
+                # 1. الرفع للمجلد
+                meta = {'name': up.name, 'parents': [FID]}
+                media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+                file = service.files().create(body=meta, media_body=media, fields='id, webViewLink').execute()
+                
+                # 2. خطوة "الإظهار": إعطاء صلاحية لبريدك الشخصي ليظهر الملف عندك
+                permission = {
+                    'type': 'user',
+                    'role': 'writer',
+                    'emailAddress': MY_EMAIL
+                }
+                service.permissions().create(fileId=file.get('id'), body=permission).execute()
+                
+                st.success("✅ تم الرفع! ستجد الملف في مجلد 'الجديد' أو في 'تمت مشاركتها معي'.")
+                st.markdown(f"🔗 [اضغط هنا لفتح الملف مباشرة]({file.get('webViewLink')})")
+                st.balloons()
     except Exception as e:
-        st.error(f"خطأ: {e}")
+        st.error(f"حدث خطأ: {e}")
