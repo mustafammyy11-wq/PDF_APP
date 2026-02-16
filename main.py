@@ -1,42 +1,29 @@
 import streamlit as st
-from pydrive2.auth import GoogleAuth
-from pydrive2.drive import GoogleDrive
-from oauth2client.service_account import ServiceAccountCredentials
+import dropbox
 import io
 
-# 1. معرف المجلد الشخصي
-FOLDER_ID = "1RLkxpJM8CEunpNDUcANE_jVdFII7V5bW"
+# ضع الرمز (Token) الخاص بك هنا بين علامتي التنصيص
+TOKEN = "الرمز_الذي_أرسلته_هنا"
 
-st.title("🏛️ نظام أرشفة مصطفى (الرفع المباشر)")
+st.set_page_config(page_title="أرشيف مصطفى")
+st.title("🏛️ نظام أرشفة مصطفى (نسخة Dropbox)")
 
-up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
+# واجهة رفع الملفات
+up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
 
-if up and st.button("🚀 تنفيذ الرفع"):
+if up and st.button("🚀 رفع الملف الآن"):
     try:
-        # 2. إعداد الصلاحيات باستخدام PyDrive2 لتجاوز قيود Quota
-        scope = ['https://www.googleapis.com/auth/drive']
-        creds_info = st.secrets["gcp_service_account"]
+        # الاتصال بـ Dropbox
+        dbx = dropbox.Dropbox(TOKEN)
         
-        # إنشاء ملف مؤقت للمفاتيح (ضروري لهذه المكتبة)
-        gauth = GoogleAuth()
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_info, scope)
-        gauth.credentials = creds
-        drive = GoogleDrive(gauth)
-
-        with st.spinner("جاري كسر قيود المساحة والرفع..."):
-            # 3. إنشاء الملف وتحديده لمجلدك الشخصي
-            file_drive = drive.CreateFile({
-                'title': up.name,
-                'parents': [{'id': FOLDER_ID}]
-            })
+        with st.spinner("جاري الرفع إلى Dropbox..."):
+            # رفع الملف إلى المجلد الرئيسي في دروب بوكس
+            dbx.files_upload(up.read(), f"/{up.name}", mode=dropbox.files.WriteMode.overwrite)
             
-            # رفع المحتوى
-            file_drive.content = io.BytesIO(up.read())
-            file_drive.Upload() # الرفع المباشر
-
-            st.success("✅ أخيراً! تمت العملية بنجاح ووصل الملف.")
-            st.balloons()
-
+        st.success("✅ مبروك يا مصطفى! تم الرفع بنجاح وبدون أي مشاكل مساحة.")
+        st.balloons()
+        
     except Exception as e:
-        st.error(f"❌ محاولة أخيرة فشلت: {e}")
-        st.info("نصيحة: إذا استمر هذا الخطأ، جرب إنشاء إيميل (Service Account) جديد تماماً، فقد يكون هذا الإيميل محظوراً من جوجل.")
+        # إذا انتهت صلاحية الكود أو حدث خطأ في الصلاحيات
+        st.error(f"❌ حدث خطأ: {e}")
+        st.info("تأكد من تفعيل صلاحية 'files.content.write' في إعدادات تطبيق Dropbox.")
