@@ -4,7 +4,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# بياناتك من الصور السابقة (الرجاء عدم تغييرها)
+# الإعدادات المباشرة من صورك السابقة
 FID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
 PK = r"""-----BEGIN PRIVATE KEY-----
@@ -36,21 +36,22 @@ j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
 FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
-st.title("🏛️ نظام الأرشفة النهائي")
+st.title("🏛️ نظام الأرشفة")
+pwd = st.sidebar.text_input("رمز الدخول:", type="password")
 
-if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
+if pwd == "123":
     try:
-        creds = service_account.Credentials.from_service_account_info({
-            "type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
-            "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"
-        })
+        info = {"type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
+                "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"}
+        creds = service_account.Credentials.from_service_account_info(info)
         service = build('drive', 'v3', credentials=creds)
+        
         up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
-        if up and st.button("رفع الملف"):
+        if up and st.button("رفع الآن"):
             meta = {'name': up.name, 'parents': [FID]}
             media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
-            # السطر الذهبي لحل مشكلة المساحة
+            # السطر الذهبي لحل مشكلة Quota المذكورة في صورتك 6d6f850d
             service.files().create(body=meta, media_body=media, supportsAllDrives=True).execute()
-            st.success("🎉 مبروك يا مصطفى! تم الرفع بنجاح!")
+            st.success("✅ تم الرفع بنجاح!")
     except Exception as e:
-        st.error(f"يوجد خطأ: {e}")
+        st.error(f"فشل الرفع: {e}")
