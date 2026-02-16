@@ -4,7 +4,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# الرقم المستخرج من رابط المجلد الذي أرسلته (النهائي)
+# رقم المجلد الذي شاركته أنت في الصورة الأخيرة
 FOLDER_ID = "1RLkxpJM8CEunpNDUcANE_jVdFII7V5bW"
 
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
@@ -37,7 +37,7 @@ j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
 FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
-st.set_page_config(page_title="نظام الأرشفة المطور")
+st.set_page_config(page_title="نظام الأرشفة")
 st.title("🏛️ نظام الأرشفة")
 
 up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
@@ -54,7 +54,7 @@ if up and st.button("🚀 رفع الآن"):
             meta = {'name': up.name, 'parents': [FOLDER_ID]}
             media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
             
-            # الرفع مع دعم المساحات المشتركة
+            # الرفع مع دعم المساحات المشتركة لتخطي قيود الـ Quota
             file = service.files().create(body=meta, media_body=media, supportsAllDrives=True).execute()
             
             st.success("✅ مبروك يا مصطفى! تم الرفع بنجاح.")
