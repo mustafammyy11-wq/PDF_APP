@@ -4,9 +4,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# جربنا كل الاحتمالات، سنضع الرقم كما ظهر في آخر خطأ لك
-FID = "1-2fiKxjnbAWlIFSNVxxdoqYEa0KuuBmh"
-
+# معلومات الحساب
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
 PK = r"""-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n
@@ -37,32 +35,36 @@ j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
 FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
-st.title("🏛️ نظام الأرشفة")
+st.title("🏛️ نظام الأرشفة السريع")
 
-if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
+# طلب الرمز للتأكد من الهوية
+pw = st.sidebar.text_input("رمز الدخول:", type="password")
+
+if pw == "123":
     try:
+        # تجهيز الاتصال
         creds = service_account.Credentials.from_service_account_info({
             "type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
             "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"
         })
         service = build('drive', 'v3', credentials=creds)
+
+        up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
         
-        up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
-        if up and st.button("🚀 بدء الرفع الآن"):
-            with st.spinner("جاري محاولة الرفع..."):
-                file_metadata = {'name': up.name}
-                # محاولة وضع الملف في المجلد "الجديد" أولاً
-                if FID:
-                    file_metadata['parents'] = [FID.strip()]
-                
+        if up and st.button("🚀 رفع الآن"):
+            with st.spinner("جاري الرفع..."):
+                # الرفع للمساحة العامة مباشرة لتجنب أخطاء المجلدات
+                meta = {'name': up.name}
                 media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
                 
                 try:
-                    # محاولة الرفع للمجلد المحدد
-                    file = service.files().create(body=file_metadata, media_body=media, supportsAllDrives=True).execute()
-                    st.success("✅ تم الرفع بنجاح للمجلد المخصص!")
+                    service.files().create(body=meta, media_body=media).execute()
+                    st.success("✅ تم الرفع بنجاح للمساحة العامة!")
                     st.balloons()
-                except Exception:
-                    # إذا فشل المجلد (مثل خطأ 404)، يرفعه للمساحة المتاحة فوراً
-                    up.seek(0)
-                    file_metadata.pop('parents',
+                except Exception as e:
+                    st.error(f"حدث خطأ أثناء الرفع: {e}")
+                    
+    except Exception as e:
+        st.error(f"فشل في الاتصال بالخدمة: {e}")
+else:
+    st.info("الرجاء إدخال الرمز الصحيح في القائمة الجانبية.")
