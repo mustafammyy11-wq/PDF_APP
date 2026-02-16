@@ -4,13 +4,10 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# 1. الرقم الدقيق للمجلد (من صورتك الرابط يبدأ بـ 1-2fiK)
+# الـ ID الصحيح لمجلدك "الجديد"
 FID = "1-2fiKxjnbAWlIFSNVxxdoqYEa0KuuBmh"
 
-# 2. بريد حساب الخدمة الخاص بك
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
-
-# 3. المفتاح الخاص (Private Key)
 PK = r"""-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n
 xso1o/FzJ8XD7o83BVg4Y9qJ3gCkXpnXWkyFtqSHdcBDlGt370RRxDpuQxdrhKcN
@@ -43,44 +40,31 @@ FzuPgWBddTbzyAfiPYFwGW8=
 st.set_page_config(page_title="أرشفة المحطة")
 st.title("🏛️ نظام الأرشفة")
 
-# القائمة الجانبية
-password = st.sidebar.text_input("رمز الدخول:", type="password")
-
-if password == "123":
+if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
     try:
-        # إعداد الاتصال بجوجل
-        info = {
-            "type": "service_account",
-            "project_id": "project-e4fb2fde-9291-482a-b14",
-            "private_key": PK,
-            "client_email": MAIL,
-            "token_uri": "https://oauth2.googleapis.com/token",
-        }
+        info = {"type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14", "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"}
         creds = service_account.Credentials.from_service_account_info(info)
         service = build('drive', 'v3', credentials=creds)
         
-        uploaded_file = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
-        
-        if uploaded_file and st.button("🚀 رفع الملف الآن"):
-            with st.spinner("جاري الرفع للمجلد الجديد..."):
+        up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
+        if up and st.button("🚀 رفع الملف الآن"):
+            with st.spinner("جاري الرفع..."):
                 try:
-                    # إعداد الملف للرفع
-                    file_metadata = {'name': uploaded_file.name, 'parents': [FID]}
-                    media = MediaIoBaseUpload(io.BytesIO(uploaded_file.read()), mimetype='application/pdf')
-                    
-                    # عملية الرفع الأساسية
-                    file = service.files().create(
-                        body=file_metadata, 
-                        media_body=media, 
-                        fields='id',
-                        supportsAllDrives=True # لتجاوز أخطاء المساحة
-                    ).execute()
-                    
-                    st.success("✅ نجح الرفع! اذهب الآن لمجلدك 'الجديد' وستجد الملف هناك.")
+                    meta = {'name': up.name, 'parents': [FID]}
+                    media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+                    # الرفع مع دعم المجلدات لتجاوز أخطاء المساحة
+                    service.files().create(body=meta, media_body=media, supportsAllDrives=True).execute()
+                    st.success("✅ تم الرفع بنجاح للمجلد!")
                     st.balloons()
                 except Exception as e:
-                    # حل احتياطي في حال وجود مشكلة في رقم المجلد
-                    st.warning("حدثت مشكلة في المجلد، جاري الرفع للمساحة العامة...")
-                    meta_fallback = {'name': uploaded_file.name}
+                    # حل احتياطي عند فشل المجلد
+                    st.warning("جاري الرفع للمساحة العامة...")
+                    meta_alt = {'name': up.name}
+                    media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
                     service.files().create(body=meta_alt, media_body=media).execute()
-                    st.success("✅ تم الرفع للمساحة العامة بن
+                    st.success("✅ تم الرفع للمساحة العامة بنجاح!")
+                    st.balloons()
+    except Exception as e:
+        st.error(f"خطأ: {e}")
+else:
+    st.info("أدخل الرمز (123) للبدء.")
