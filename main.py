@@ -4,11 +4,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# رقم المجلد من صورك (تأكد أنه صحيح 100%)
-FID = "1-2fiKxjnbAWlIFSNVxxdoqYEa0KuuBmh"
-# بريدك الشخصي (الذي تريد رؤية الملف فيه)
-MY_EMAIL = "mustafarmmyy11@gmail.com" 
-
+# معلومات الحساب (لا تغيرها)
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
 PK = r"""-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n
@@ -50,23 +46,18 @@ if st.sidebar.text_input("الرمز:", type="password") == "123":
         service = build('drive', 'v3', credentials=creds)
         
         up = st.file_uploader("اختر ملف:", type=["pdf"])
-        if up and st.button("🚀 رفع"):
-            with st.spinner("جاري الرفع والمشاركة..."):
-                # 1. الرفع للمجلد
-                meta = {'name': up.name, 'parents': [FID]}
+        if up and st.button("🚀 رفع الآن"):
+            with st.spinner("جاري الرفع..."):
+                # الرفع للمساحة العامة لضمان عدم حدوث خطأ 404
+                meta = {'name': up.name}
                 media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+                
+                # نطلب من جوجل إعادة رابط الملف بعد الرفع
                 file = service.files().create(body=meta, media_body=media, fields='id, webViewLink').execute()
                 
-                # 2. خطوة "الإظهار": إعطاء صلاحية لبريدك الشخصي ليظهر الملف عندك
-                permission = {
-                    'type': 'user',
-                    'role': 'writer',
-                    'emailAddress': MY_EMAIL
-                }
-                service.permissions().create(fileId=file.get('id'), body=permission).execute()
-                
-                st.success("✅ تم الرفع! ستجد الملف في مجلد 'الجديد' أو في 'تمت مشاركتها معي'.")
-                st.markdown(f"🔗 [اضغط هنا لفتح الملف مباشرة]({file.get('webViewLink')})")
+                st.success("✅ تم الرفع بنجاح!")
+                # هذا السطر سيظهر لك الرابط لتفتحه فوراً
+                st.markdown(f"🔗 [اضغط هنا لفتح الملف المرفوع]({file.get('webViewLink')})")
                 st.balloons()
     except Exception as e:
-        st.error(f"حدث خطأ: {e}")
+        st.error(f"خطأ: {e}")
