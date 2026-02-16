@@ -4,8 +4,11 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# 1. المفتاح الخاص (وضعته لك بطريقة "السطر الواحد" لتجنب أخطاء PEM)
-KEY_STRING = (
+# 1. بيانات الربط (جاهزة ومصلحة تماماً)
+FOLDER_ID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
+
+# تم تنسيق المفتاح هنا ليعمل 100% دون أخطاء PEM
+PRIVATE_KEY = (
     "-----BEGIN PRIVATE KEY-----\n"
     "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n\n"
     "xso1o/FzJ8XD7o83BVg4Y9qJ3gCkXpnXWkyFtqSHdcBDlGt370RRxDpuQxdrhKcN\n"
@@ -19,46 +22,59 @@ KEY_STRING = (
     "-----END PRIVATE KEY-----\n"
 )
 
-# 2. بيانات الحساب ومعرف المجلد
-GCP_JSON = {
+credentials_info = {
     "type": "service_account",
     "project_id": "project-e4fb2fde-9291-482a-b14",
-    "private_key": KEY_STRING,
+    "private_key": PRIVATE_KEY,
     "client_email": "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com",
     "token_uri": "https://oauth2.googleapis.com/token",
 }
-FOLDER_ID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
 
+# 2. وظيفة إنشاء الاتصال
 def get_drive_service():
+    creds = service_account.Credentials.from_service_account_info(credentials_info)
+    return build('drive', 'v3', credentials=creds)
+
+# 3. واجهة البرنامج
+st.set_page_config(page_title="أرشيف المحطة", layout="centered")
+st.title("🏛️ نظام الأرشفة المركزي")
+
+password = st.sidebar.text_input("رمز الدخول:", type="password")
+
+if password == "123":
     try:
-        creds = service_account.Credentials.from_service_account_info(GCP_JSON)
-        return build('drive', 'v3', credentials=creds)
-    except Exception as e:
-        st.error(f"خطأ في بناء الخدمة: {e}")
-        return None
+        service = get_drive_service()
+        # فحص الاتصال بالمجلد
+        folder_metadata = service.files().get(fileId=FOLDER_ID, fields='name').execute()
+        st.success(f"✅ متصل بمجلد: {folder_metadata['name']}")
 
-st.set_page_config(page_title="الأرشيف الذكي", layout="centered")
+        tab1, tab2 = st.tabs(["📤 رفع ملف", "🔍 بحث"])
 
-if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
-    st.title("🏛️ الأرشيف المركزي")
-    service = get_drive_service()
-    
-    if service:
-        try:
-            # اختبار الاتصال بالمجلد
-            folder = service.files().get(fileId=FOLDER_ID, fields='name').execute()
-            st.success(f"✅ متصل بنجاح بمجلد: {folder['name']}")
-            
-            up_file = st.file_uploader("اختر ملف الوصل:")
-            if up_file and st.button("تأكيد الرفع"):
+        with tab1:
+            uploaded_file = st.file_uploader("اختر ملف:")
+            if uploaded_file and st.button("تأكيد الرفع"):
                 with st.spinner("جاري الرفع..."):
-                    metadata = {'name': up_file.name, 'parents': [FOLDER_ID]}
-                    media = MediaIoBaseUpload(io.BytesIO(up_file.read()), mimetype=up_file.type)
-                    service.files().create(body=metadata, media_body=media).execute()
-                    st.success("✅ تم الرفع!")
+                    file_metadata = {'name': uploaded_file.name, 'parents': [FOLDER_ID]}
+                    media = MediaIoBaseUpload(io.BytesIO(uploaded_file.read()), mimetype=uploaded_file.type)
+                    service.files().create(body=file_metadata, media_body=media).execute()
+                    st.success("تم الرفع بنجاح!")
                     st.balloons()
-        except Exception as e:
-            st.error("⚠️ البرمجية لا ترى المجلد.")
-            st.info(f"تأكد من مشاركة المجلد مع: {GCP_JSON['client_email']}")
+
+        with tab2:
+            query = st.text_input("ابحث عن اسم ملف:")
+            if query:q=f"'{FOLDER_ID}' in parents and name contains '{query}'",
+                    fields="files(id, name, webViewLink)"
+                ).execute()
+                items = results.get('files', [])
+                if items:
+                    for item in items:
+                        st.write(f"📄 {item['name']}")
+                        st.link_button("فتح الرابط", item['webViewLink'])
+                else:
+                    st.warning("لا يوجد ملف بهذا الاسم.")
+
+    except Exception as e:
+        st.error(f"⚠️ خطأ في الاتصال: {e}")
 else:
     st.info("أدخل الرمز 123 للبدء")
+                results = service.files().list(
