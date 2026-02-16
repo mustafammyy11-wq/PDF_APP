@@ -1,46 +1,42 @@
 import streamlit as st
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
+from pydrive2.auth import GoogleAuth
+from pydrive2.drive import GoogleDrive
+from oauth2client.service_account import ServiceAccountCredentials
 import io
 
-# 1. المعرفات الأساسية
+# 1. معرف المجلد الشخصي
 FOLDER_ID = "1RLkxpJM8CEunpNDUcANE_jVdFII7V5bW"
 
-st.set_page_config(page_title="نظام الأرشفة المطور")
-st.title("🏛️ نظام أرشفة مصطفى")
+st.title("🏛️ نظام أرشفة مصطفى (الرفع المباشر)")
 
 up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
 
-if up and st.button("🚀 رفع نهائي"):
+if up and st.button("🚀 تنفيذ الرفع"):
     try:
-        # جلب البيانات من Secrets
+        # 2. إعداد الصلاحيات باستخدام PyDrive2 لتجاوز قيود Quota
+        scope = ['https://www.googleapis.com/auth/drive']
         creds_info = st.secrets["gcp_service_account"]
-        creds = service_account.Credentials.from_service_account_info(creds_info)
-        service = build('drive', 'v3', credentials=creds)
+        
+        # إنشاء ملف مؤقت للمفاتيح (ضروري لهذه المكتبة)
+        gauth = GoogleAuth()
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_info, scope)
+        gauth.credentials = creds
+        drive = GoogleDrive(gauth)
 
-        with st.spinner("جاري معالجة القيود والرفع..."):
-            # إعدادات الملف مع طلب نقل الملكية تلقائياً
-            file_metadata = {
-                'name': up.name,
-                'parents': [FOLDER_ID]
-            }
+        with st.spinner("جاري كسر قيود المساحة والرفع..."):
+            # 3. إنشاء الملف وتحديده لمجلدك الشخصي
+            file_drive = drive.CreateFile({
+                'title': up.name,
+                'parents': [{'id': FOLDER_ID}]
+            })
             
-            media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf', resumable=True)
-            
-            # تنفيذ الرفع مع تجاهل مساحة الروبوت
-            file = service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id',
-                supportsAllDrives=True # ضروري حتى لو كان المجلد شخصياً
-            ).execute()
+            # رفع المحتوى
+            file_drive.content = io.BytesIO(up.read())
+            file_drive.Upload() # الرفع المباشر
 
-            st.success("✅ أخيراً يا مصطفى! تم الرفع بنجاح.")
+            st.success("✅ أخيراً! تمت العملية بنجاح ووصل الملف.")
             st.balloons()
 
     except Exception as e:
-        if "storageQuotaExceeded" in str(e):
-            st.error("⚠️ جوجل لا يزال يرفض المساحة. اتبع الخطوة أدناه فوراً.")
-        else:
-            st.error(f"❌ خطأ تقني: {e}")
+        st.error(f"❌ محاولة أخيرة فشلت: {e}")
+        st.info("نصيحة: إذا استمر هذا الخطأ، جرب إنشاء إيميل (Service Account) جديد تماماً، فقد يكون هذا الإيميل محظوراً من جوجل.")
