@@ -4,11 +4,11 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# 1. الإعدادات الأساسية (مأخوذة من صورك السابقة)
+# 1. الإعدادات (ثابتة من صورك)
 FOLDER_ID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
 SERVICE_ACCOUNT_EMAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
 
-# 2. المفتاح الخاص (استخدام حرف r قبل النص لمنع أخطاء التنسيق)
+# 2. المفتاح الخاص (النسخة الخام لمنع أخطاء التنسيق)
 PRIVATE_KEY = r"""-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n
 xso1o/FzJ8XD7o83BVg4Y9qJ3gCkXpnXWkyFtqSHdcBDlGt370RRxDpuQxdrhKcN
@@ -38,59 +38,68 @@ j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
 FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
-st.set_page_config(page_title="نظام الأرشفة الذكي", layout="centered")
-st.title("🏛️ نظام أرشفة الملفات (PDF)")
+st.set_page_config(page_title="نظام الأرشفة المطور", layout="centered")
+st.title("🏛️ مركز أرشفة الوصولات")
 
-# واجهة الدخول
-password = st.sidebar.text_input("الرجاء إدخال رمز الدخول:", type="password")
+# تفعيل تسجيل الدخول من القائمة الجانبية
+password = st.sidebar.text_input("رمز الدخول:", type="password")
 
 if password == "123":
     try:
-        # إعداد بيانات الاعتماد
-        credentials_info = {
+        # إعداد الاتصال
+        info = {
             "type": "service_account",
             "project_id": "project-e4fb2fde-9291-482a-b14",
             "private_key": PRIVATE_KEY,
             "client_email": SERVICE_ACCOUNT_EMAIL,
             "token_uri": "https://oauth2.googleapis.com/token",
         }
-        
-        creds = service_account.Credentials.from_service_account_info(credentials_info)
+        creds = service_account.Credentials.from_service_account_info(info)
         service = build('drive', 'v3', credentials=creds)
-        
-        # واجهة رفع الملف
-        uploaded_file = st.file_uploader("قم باختيار ملف PDF لرفعه إلى المجلد المشترك:", type=["pdf"])
-        
-        if uploaded_file is not None:
-            if st.button("🚀 بدء الرفع الآن"):
-                with st.spinner("جاري التواصل مع جوجل درايف والرفع..."):
-                    try:
-                        file_metadata = {
-                            'name': uploaded_file.name,
-                            'parents': [FOLDER_ID]
-                        }
-                        media = MediaIoBaseUpload(
-                            io.BytesIO(uploaded_file.read()), 
-                            mimetype='application/pdf'
-                        )
-                        
-                        # السطر الأهم: إضافة supportsAllDrives لتجاوز خطأ Quota
-                        file = service.files().create(
-                            body=file_metadata,
-                            media_body=media,
-                            fields='id',
-                            supportsAllDrives=True,
-                            supportsTeamDrives=True
-                        ).execute()
-                        
-                        st.success(f"✅ تم الرفع بنجاح! رقم الملف: {file.get('id')}")
-                        st.balloons()
-                        
-                    except Exception as upload_error:
-                        st.error(f"فشل في الرفع: {upload_error}")
-                        st.info("نصيحة: تأكد أن مساحة حسابك الشخصي (الجيميل) ليست ممتلئة.")
-                        
-    except Exception as auth_error:
-        st.error(f"خطأ في الاتصال بالخدمة: {auth_error}")
+
+        file_uploaded = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
+
+        if file_uploaded and st.button("تأكيد الرفع النهائي"):
+            with st.spinner("جاري تجاوز قيود المساحة والرفع..."):
+                try:
+                    # إعداد بيانات الملف
+                    file_metadata = {
+                        'name': file_uploaded.name,
+                        'parents': [FOLDER_ID]
+                    }
+                    
+                    # قراءة محتوى الملف
+                    media = MediaIoBaseUpload(
+                        io.BytesIO(file_uploaded.read()), 
+                        mimetype='application/pdf',
+                        resumable=True # تفعيل خاصية الرفع المتتابع للأمان
+                    )
+
+                    # السطر الذي يحتوي على كل مفاتيح فك قيود جوجل
+                    request = service.files().create(
+                        body=file_metadata,
+                        media_body=media,
+                        fields='id',
+                        supportsAllDrives=True,
+                        supportsTeamDrives=True,
+                        ignoreDefaultVisibility=True
+                    )
+                    
+                    response = request.execute()
+                    
+                    st.success(f"✅ تم الرفع بنجاح! معرف الملف: {response.get('id')}")
+                    st.balloons()
+
+                except Exception as e:
+                    # عرض الخطأ بتفصيل أكبر للفهم
+                    error_msg = str(e)
+                    if "storageQuotaExceeded" in error_msg:
+                        st.error("❌ لا تزال جوجل تدعي امتلاء المساحة!")
+                        st.info("نصيحة أخيرة: اذهب للمجلد في الدرايف، احذفه وأنشئ مجلداً جديداً وشاركه مع الروبوت، ثم غير الـ FOLDER_ID في الكود.")
+                    else:
+                        st.error(f"حدث خطأ غير متوقع: {e}")
+
+    except Exception as e:
+        st.error(f"فشل في المصادقة: {e}")
 else:
-    st.warning("الرجاء إدخال رمز الدخول الصحيح في القائمة الجانبية.")
+    st.info("الرجاء إدخال الرمز (123) في القائمة الجانبية للبدء.")
