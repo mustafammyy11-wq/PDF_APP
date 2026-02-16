@@ -4,10 +4,12 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# الإعدادات المباشرة من صورك السابقة
-FID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
-MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
-PK = r"""-----BEGIN PRIVATE KEY-----
+# 1. الإعدادات الأساسية (مأخوذة من صورك السابقة)
+FOLDER_ID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
+SERVICE_ACCOUNT_EMAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
+
+# 2. المفتاح الخاص (استخدام حرف r قبل النص لمنع أخطاء التنسيق)
+PRIVATE_KEY = r"""-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n
 xso1o/FzJ8XD7o83BVg4Y9qJ3gCkXpnXWkyFtqSHdcBDlGt370RRxDpuQxdrhKcN
 psEUKPm8woTRq0u67OZnDlJHR7w2eFeris562xfDHCgGH8yhX+P39w5p8hMUyBmp
@@ -36,22 +38,59 @@ j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
 FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
-st.title("🏛️ نظام الأرشفة")
-pwd = st.sidebar.text_input("رمز الدخول:", type="password")
+st.set_page_config(page_title="نظام الأرشفة الذكي", layout="centered")
+st.title("🏛️ نظام أرشفة الملفات (PDF)")
 
-if pwd == "123":
+# واجهة الدخول
+password = st.sidebar.text_input("الرجاء إدخال رمز الدخول:", type="password")
+
+if password == "123":
     try:
-        info = {"type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
-                "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"}
-        creds = service_account.Credentials.from_service_account_info(info)
+        # إعداد بيانات الاعتماد
+        credentials_info = {
+            "type": "service_account",
+            "project_id": "project-e4fb2fde-9291-482a-b14",
+            "private_key": PRIVATE_KEY,
+            "client_email": SERVICE_ACCOUNT_EMAIL,
+            "token_uri": "https://oauth2.googleapis.com/token",
+        }
+        
+        creds = service_account.Credentials.from_service_account_info(credentials_info)
         service = build('drive', 'v3', credentials=creds)
         
-        up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
-        if up and st.button("رفع الآن"):
-            meta = {'name': up.name, 'parents': [FID]}
-            media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
-            # السطر الذهبي لحل مشكلة Quota المذكورة في صورتك 6d6f850d
-            service.files().create(body=meta, media_body=media, supportsAllDrives=True).execute()
-            st.success("✅ تم الرفع بنجاح!")
-    except Exception as e:
-        st.error(f"فشل الرفع: {e}")
+        # واجهة رفع الملف
+        uploaded_file = st.file_uploader("قم باختيار ملف PDF لرفعه إلى المجلد المشترك:", type=["pdf"])
+        
+        if uploaded_file is not None:
+            if st.button("🚀 بدء الرفع الآن"):
+                with st.spinner("جاري التواصل مع جوجل درايف والرفع..."):
+                    try:
+                        file_metadata = {
+                            'name': uploaded_file.name,
+                            'parents': [FOLDER_ID]
+                        }
+                        media = MediaIoBaseUpload(
+                            io.BytesIO(uploaded_file.read()), 
+                            mimetype='application/pdf'
+                        )
+                        
+                        # السطر الأهم: إضافة supportsAllDrives لتجاوز خطأ Quota
+                        file = service.files().create(
+                            body=file_metadata,
+                            media_body=media,
+                            fields='id',
+                            supportsAllDrives=True,
+                            supportsTeamDrives=True
+                        ).execute()
+                        
+                        st.success(f"✅ تم الرفع بنجاح! رقم الملف: {file.get('id')}")
+                        st.balloons()
+                        
+                    except Exception as upload_error:
+                        st.error(f"فشل في الرفع: {upload_error}")
+                        st.info("نصيحة: تأكد أن مساحة حسابك الشخصي (الجيميل) ليست ممتلئة.")
+                        
+    except Exception as auth_error:
+        st.error(f"خطأ في الاتصال بالخدمة: {auth_error}")
+else:
+    st.warning("الرجاء إدخال رمز الدخول الصحيح في القائمة الجانبية.")
