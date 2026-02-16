@@ -4,8 +4,8 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# الرقم المستخرج من الرابط الذي أرسلته أنت
-MY_FOLDER_ID = "1RLkxpJM8CEunpNDUcANE_jVdFII7V5bW"
+# الرقم المستخرج من رابط المجلد الذي أرسلته (النهائي)
+FOLDER_ID = "1RLkxpJM8CEunpNDUcANE_jVdFII7V5bW"
 
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
 PK = r"""-----BEGIN PRIVATE KEY-----
@@ -27,4 +27,39 @@ aVs8iaB51L4Ud/qmb+imX6Ul9iQsOZxFv152qHVvxmnd1l8OO9e1GWKYTXFBLjHn
 F2MsQJNld3ZoULyRipWYXIM7uCA/eP6hNmYBTaKBr7kDzHLCEY2u08J7sFMWx/9a
 sIgSJUGtz3sooe+e/GIRcedFNiqVOUl60S6tdIYkBXKCEbBT2WNN0HwHdWVOPbJx
 r/9qFz/VtQKBgQC8m7ul6jx7DxmwDuTqOh2TEGSIOLE920Ha15M5amIScPPXdxvw
-vITBrdCQOI61bcK/TPUyl+xGYtQMfZqKM/K3Pc2BZF1jtOtJ6jqbTry
+vITBrdCQOI61bcK/TPUyl+xGYtQMfZqKM/K3Pc2BZF1jtOtJ6jqbTryvza8F65mu
+G7D54N8G694Sz4QXg3PTe0zx9AXyZEG2+ti/qkQ8h+UdtkV7oYqS/ixPAQKBgDwX
+Bo5B4wxwndPvRIxiFUKdeq40P8Kn5FfKWoesEhL5TOAs6ipxoR4/g+bHstRvPoPC
+SNkGjYoEpSXwbbu06mszUQTFva34D2OktAFwvEWvuAeuRMAsTrbv95GjLwvnWtov
+HTvbYmpaj1FtHfuJ38MlH2b8PRYXEC7Igz9RVYiVAoGAImaNeSPbdKLfTG90gNrP
+j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
+4bccccv4fBMmkGYHsHsph+qNGiwPaKz6TmypAcspIGM06ajVLH1zLzw8EfDFHUu0
+FzuPgWBddTbzyAfiPYFwGW8=
+-----END PRIVATE KEY-----"""
+
+st.set_page_config(page_title="نظام الأرشفة المطور")
+st.title("🏛️ نظام الأرشفة")
+
+up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
+
+if up and st.button("🚀 رفع الآن"):
+    try:
+        creds = service_account.Credentials.from_service_account_info({
+            "type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
+            "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"
+        })
+        service = build('drive', 'v3', credentials=creds)
+
+        with st.spinner("جاري التخزين في مجلدك الخاص..."):
+            meta = {'name': up.name, 'parents': [FOLDER_ID]}
+            media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+            
+            # الرفع مع دعم المساحات المشتركة
+            file = service.files().create(body=meta, media_body=media, supportsAllDrives=True).execute()
+            
+            st.success("✅ مبروك يا مصطفى! تم الرفع بنجاح.")
+            st.balloons()
+            st.info("افتح مجلد 'الأرشيف' في جوجل درايف وستجد الملف هناك.")
+            
+    except Exception as e:
+        st.error(f"⚠️ فشل الرفع: {e}")
