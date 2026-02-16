@@ -4,7 +4,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# 1. الرقم الصحيح والدقيق لمجلدك (تم نسخه من صورتك الأخيرة)
+# الـ ID الدقيق والمصحح لمجلدك "الجديد"
 FID = "1-2fiKxjnbAWlIFSNVxxdoqYEa0KuuBmh"
 
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
@@ -37,9 +37,12 @@ j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
 FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
+st.set_page_config(page_title="أرشفة المحطة")
 st.title("🏛️ نظام الأرشفة")
+
 if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
     try:
+        # الربط مع جوجل
         creds = service_account.Credentials.from_service_account_info({
             "type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
             "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"
@@ -47,21 +50,28 @@ if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
         service = build('drive', 'v3', credentials=creds)
         
         up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
-        if up and st.button("رفع الملف"):
-            with st.spinner("جاري الرفع..."):
-                meta = {'name': up.name, 'parents': [FID]}
-                media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
-                
-                # رفع الملف مع تفعيل دعم المجلدات المشتركة
-                file = service.files().create(
-                    body=meta, 
-                    media_body=media, 
-                    supportsAllDrives=True,
-                    fields='id'
-                ).execute()
-                
-                st.success("✅ تم الرفع! ستجد الملف الآن داخل مجلدك 'الجديد'.")
-                st.balloons()
-                
+        if up and st.button("🚀 بدء الرفع الآن"):
+            with st.spinner("جاري معالجة الملف..."):
+                try:
+                    meta = {'name': up.name, 'parents': [FID]}
+                    media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+                    
+                    # الرفع مع دعم المجلدات لتجاوز أخطاء المساحة
+                    file = service.files().create(
+                        body=meta, 
+                        media_body=media, 
+                        fields='id',
+                        supportsAllDrives=True
+                    ).execute()
+                    
+                    st.success(f"✅ تم الرفع بنجاح للمجلد الجديد! (ID: {file.get('id')})")
+                    st.balloons()
+                except Exception as e:
+                    # إذا حدث خطأ في المجلد، ارفع للمساحة العامة كحل احتياطي
+                    st.warning("جاري الرفع للمساحة العامة بسبب قيود المجلد...")
+                    meta_alt = {'name': up.name}
+                    service.files().create(body=meta_alt, media_body=media).execute()
+                    st.success("✅ تم الرفع بنجاح للمساحة العامة!")
+                    st.balloons()
     except Exception as e:
-        st.error(f"حدث خطأ: {e}")
+        st.error(f"خطأ في الاتصال: {e}")
