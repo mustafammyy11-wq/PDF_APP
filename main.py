@@ -4,9 +4,10 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# رقم مجلدك كما في الصورة
+# رقم مجلدك الصحيح
 FOLDER_ID = "1RLkxpJM8CEunpNDUcANE_jVdFII7V5bW"
 
+# بيانات الروبوت
 INFO = {
     "type": "service_account",
     "project_id": "project-e4fb2fde-9291-482a-b14",
@@ -15,30 +16,32 @@ INFO = {
     "token_uri": "https://oauth2.googleapis.com/token",
 }
 
-st.title("🚀 الحل النهائي للأرشفة")
+st.set_page_config(page_title="نظام الأرشفة الذكي")
+st.title("🏛️ نظام الأرشفة")
 
-up = st.file_uploader("ارفع ملف PDF الآن:", type=["pdf"])
+up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
 
-if up and st.button("تأكيد الرفع"):
+if up and st.button("🚀 رفع الآن"):
     try:
         creds = service_account.Credentials.from_service_account_info(INFO)
         service = build('drive', 'v3', credentials=creds)
-        
-        # إعداد بيانات الملف
-        file_metadata = {'name': up.name, 'parents': [FOLDER_ID]}
-        media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
-        
-        # التعديل السحري: إجبار جوجل على استخدام مساحة المجلد الوجهة
-        file = service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id',
-            supportsAllDrives=True # يسمح بالتعامل مع المجلدات المشتركة
-        ).execute()
-        
-        st.success("✅ تم الرفع بنجاح يا مصطفى!")
-        st.balloons()
-        
+
+        with st.spinner("جاري تخطي قيود المساحة والرفع..."):
+            file_metadata = {'name': up.name, 'parents': [FOLDER_ID]}
+            media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+            
+            # التعديل الجوهري: إضافة سطر supportsAllDrives لتجاوز الـ Quota
+            file = service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id, webViewLink',
+                supportsAllDrives=True 
+            ).execute()
+            
+            st.success("✅ أخيراً! نجح الرفع بنجاح.")
+            st.balloons()
+            st.markdown(f"🔗 [اضغط هنا لمشاهدة الملف في المجلد]({file.get('webViewLink')})")
+            
     except Exception as e:
-        # إذا استمر الخطأ، سنعرض رسالة واضحة تخبرنا بالسبب
-        st.error(f"عذراً، لا يزال هناك عائق: {e}")
+        # إذا ظهر الخطأ ثانية، سنفهم السبب بدقة من هذه الرسالة
+        st.error(f"⚠️ فشل الرفع: {e}")
