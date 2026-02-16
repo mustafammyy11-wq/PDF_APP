@@ -4,10 +4,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# بريدك الشخصي لتظهر الملفات فيه
-MY_EMAIL = "mustafarmmyy11@gmail.com" 
-
-# معلومات حساب الروبوت
+# معلومات الحساب
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
 PK = r"""-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n
@@ -38,31 +35,38 @@ j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
 FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
-st.title("🏛️ نظام الأرشفة")
+st.title("🏛️ نظام الأرشفة النهائي")
 
-if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
+if st.sidebar.text_input("الرمز:", type="password") == "123":
     try:
         creds = service_account.Credentials.from_service_account_info({
             "type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
             "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"
         })
         service = build('drive', 'v3', credentials=creds)
-        
-        up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
-        if up and st.button("🚀 رفع الآن"):
-            with st.spinner("جاري الرفع وإرسال الرابط..."):
-                # رفع الملف للمساحة العامة لتجنب أخطاء المجلدات السابقة
+
+        up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
+        if up and st.button("🚀 رفع الملف الآن"):
+            with st.spinner("جاري الرفع..."):
                 meta = {'name': up.name}
                 media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+                
+                # الرفع للمساحة العامة
                 file = service.files().create(body=meta, media_body=media, fields='id, webViewLink').execute()
-                
-                # مشاركة الملف فوراً مع بريدك الشخصي ليظهر عندك
-                permission = {'type': 'user', 'role': 'writer', 'emailAddress': MY_EMAIL}
-                service.permissions().create(fileId=file.get('id'), body=permission).execute()
-                
+                file_id = file.get('id')
+
+                # جعل الملف متاحاً لأي شخص معه الرابط (لضمان أنك تراه)
+                service.permissions().create(
+                    fileId=file_id,
+                    body={'type': 'anyone', 'role': 'viewer'}
+                ).execute()
+
                 st.success("✅ تم الرفع بنجاح!")
-                # الرابط السحري الذي سيفتح لك الملف فوراً
-                st.markdown(f"### 🔗 [اضغط هنا لفتح الملف المرفوع]({file.get('webViewLink')})")
                 st.balloons()
+                
+                # إظهار الرابط بوضوح
+                st.markdown(f"### 📥 [اضغط هنا لفتح الملف المرفوع]({file.get('webViewLink')})")
+                st.info("إذا ضغطت على الرابط أعلاه سيفتح الملف فوراً.")
+
     except Exception as e:
         st.error(f"حدث خطأ: {e}")
