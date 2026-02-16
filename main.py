@@ -4,10 +4,8 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# 1. الرقم الصحيح لمجلدك
+# معلومات المجلد والروبوت
 FOLDER_ID = "1RLkxpJM8CEunpNDUcANE_jVdFII7V5bW"
-
-# 2. معلومات الروبوت (منسقة لتجنب SyntaxError)
 INFO = {
     "type": "service_account",
     "project_id": "project-e4fb2fde-9291-482a-b14",
@@ -16,34 +14,26 @@ INFO = {
     "token_uri": "https://oauth2.googleapis.com/token",
 }
 
-st.title("🏛️ نظام الأرشفة النهائي")
+st.title("🏛️ تجربة الرفع الأخيرة")
 
-up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
+up = st.file_uploader("ارفع ملف PDF هنا:", type=["pdf"])
 
-if up and st.button("🚀 رفع الملف الآن"):
+if up and st.button("🚀 رفع"):
     try:
         creds = service_account.Credentials.from_service_account_info(INFO)
         service = build('drive', 'v3', credentials=creds)
-
-        with st.spinner("جاري تخطي قيود المساحة والرفع..."):
-            # هذا الجزء يضمن الرفع لمساحتك الشخصية وليس للروبوت
-            file_metadata = {
-                'name': up.name,
-                'parents': [FOLDER_ID]
-            }
-            media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
-            
-            # ملاحظة: أضفنا سطر supportsAllDrives لتفعيل الرفع للمجلد المشترك
-            file = service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id',
-                supportsAllDrives=True 
-            ).execute()
-            
-            st.success("✅ أخيراً! نجح الرفع يا بطل.")
-            st.balloons()
-            st.info(f"رقم الملف في درايف: {file.get('id')}")
-            
+        
+        meta = {'name': up.name, 'parents': [FOLDER_ID]}
+        media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+        
+        # أهم سطرين لتخطي المشاكل
+        file = service.files().create(
+            body=meta, 
+            media_body=media, 
+            supportsAllDrives=True # للسماح بالرفع للمجلد المشترك
+        ).execute()
+        
+        st.success("✅ نجح الرفع! اذهب للدرايف الآن.")
+        st.balloons()
     except Exception as e:
-        st.error(f"❌ حدث خطأ تقني: {e}")
+        st.error(f"❌ الخطأ: {e}")
