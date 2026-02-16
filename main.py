@@ -4,10 +4,13 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# ضع رقم المجلد الجديد هنا (الذي تجده في رابط المجلد)
-FID = "ضع_هنا_رقم_المجلد_الجديد" 
+# 1. الرقم الجديد للمجلد الذي استخرجناه من الرابط
+FID = "1-2fiKxjnbAWlIFSNVxxdoqYEa0KuuBmh"
 
+# 2. بريد حساب الخدمة
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
+
+# 3. المفتاح الخاص (Private Key)
 PK = r"""-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n
 xso1o/FzJ8XD7o83BVg4Y9qJ3gCkXpnXWkyFtqSHdcBDlGt370RRxDpuQxdrhKcN
@@ -37,23 +40,45 @@ j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
 FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
-st.title("🏛️ مركز أرشفة الوصولات")
+st.set_page_config(page_title="نظام الأرشفة المحترف")
+st.title("🏛️ مركز أرشفة الملفات")
+
+# التحقق من كلمة المرور
 if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
     try:
-        # اتصال البيانات
-        creds = service_account.Credentials.from_service_account_info({
-            "type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
-            "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"
-        })
+        # إعداد بيانات الاعتماد
+        info = {
+            "type": "service_account",
+            "project_id": "project-e4fb2fde-9291-482a-b14",
+            "private_key": PK,
+            "client_email": MAIL,
+            "token_uri": "https://oauth2.googleapis.com/token",
+        }
+        creds = service_account.Credentials.from_service_account_info(info)
         service = build('drive', 'v3', credentials=creds)
         
-        up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
-        if up and st.button("تأكيد الرفع النهائي"):
-            meta = {'name': up.name, 'parents': [FID]}
-            media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
-            # استخدام الأمر الذي يتجاوز أخطاء الصورة 260812dd
-            service.files().create(body=meta, media_body=media, supportsAllDrives=True).execute()
-            st.success("✅ مبروك يا مصطفى! تم الرفع للمجلد الجديد بنجاح!")
-            st.balloons()
-    except Exception as e:
-        st.error(f"خطأ: {e}")
+        uploaded_file = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
+        
+        if uploaded_file and st.button("🚀 تأكيد الرفع الآن"):
+            with st.spinner("جاري التواصل مع المجلد الجديد والرفع..."):
+                try:
+                    file_metadata = {'name': uploaded_file.name, 'parents': [FID]}
+                    media = MediaIoBaseUpload(io.BytesIO(uploaded_file.read()), mimetype='application/pdf')
+                    
+                    # الرفع مع تفعيل دعم المجلدات المشتركة لتجاوز الأخطاء السابقة
+                    file = service.files().create(
+                        body=file_metadata, 
+                        media_body=media, 
+                        fields='id',
+                        supportsAllDrives=True
+                    ).execute()
+                    
+                    st.success("✅ تم الرفع بنجاح للمجلد الجديد!")
+                    st.balloons()
+                except Exception as e:
+                    st.error(f"فشل الرفع: {e}")
+                    
+    except Exception as auth_error:
+        st.error(f"خطأ في المصادقة: {auth_error}")
+else:
+    st.info("الرجاء إدخال الرمز الصحيح في القائمة الجانبية.")
