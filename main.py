@@ -4,8 +4,8 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# معرف المجلد الدقيق (تم تنظيفه من أي مسافات)
-FID = "1-2fiKxjnbAWlIFSNVxxdoqYEa0KuuBmh".strip()
+# هذا هو الرقم الصحيح المستخرج من صورك بدقة
+FID = "1-2fiKxjnbAWlIFSNVxxdoqYEa0KuuBmh"
 
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
 PK = r"""-----BEGIN PRIVATE KEY-----
@@ -37,7 +37,9 @@ j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
 FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
+st.set_page_config(page_title="🏛️ مركز الأرشفة")
 st.title("🏛️ نظام الأرشفة")
+
 if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
     try:
         creds = service_account.Credentials.from_service_account_info({
@@ -47,23 +49,22 @@ if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
         service = build('drive', 'v3', credentials=creds)
         
         up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
-        if up and st.button("🚀 رفع الآن"):
-            with st.spinner("جاري الرفع للمجلد..."):
+        if up and st.button("🚀 رفع الملف الآن"):
+            with st.spinner("جاري الرفع..."):
                 try:
-                    meta = {'name': up.name, 'parents': [FID]}
+                    meta = {'name': up.name, 'parents': [FID.strip()]}
                     media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
                     
-                    # الرفع للمجلد المشترك
-                    file = service.files().create(
+                    # عملية الرفع النهائية
+                    service.files().create(
                         body=meta, 
                         media_body=media, 
-                        supportsAllDrives=True,
-                        fields='id'
+                        supportsAllDrives=True
                     ).execute()
                     
-                    st.success("✅ مبروك! الملف الآن داخل مجلد 'الجديد'.")
+                    st.success("✅ مبروك! تم الرفع بنجاح داخل المجلد 'الجديد'.")
                     st.balloons()
                 except Exception as e:
-                    st.error(f"تأكد من تحديث صفحة درايف ومشاركة المجلد: {e}")
+                    st.error(f"خطأ تقني: {e}")
     except Exception as e:
-        st.error(f"خطأ: {e}")
+        st.error(f"خطأ في الاتصال: {e}")
