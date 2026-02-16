@@ -4,7 +4,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# الـ ID الصحيح الذي استخرجناه من الرابط
+# 1. الرقم الصحيح والدقيق لمجلدك (تم نسخه من صورتك الأخيرة)
 FID = "1-2fiKxjnbAWlIFSNVxxdoqYEa0KuuBmh"
 
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
@@ -48,18 +48,20 @@ if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
         
         up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
         if up and st.button("رفع الملف"):
-            # محاولة الرفع للمجلد الجديد
-            try:
+            with st.spinner("جاري الرفع..."):
                 meta = {'name': up.name, 'parents': [FID]}
                 media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
-                service.files().create(body=meta, media_body=media, supportsAllDrives=True).execute()
-                st.success("✅ تم الرفع للمجلد الجديد!")
-            except:
-                # إذا فشل المجلد (بسبب ID)، ارفع للمساحة العامة للحساب
-                st.warning("⚠️ لم يتم العثور على المجلد، سيتم الرفع للمساحة العامة...")
-                meta = {'name': up.name}
-                media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
-                service.files().create(body=meta, media_body=media).execute()
-                st.success("✅ تم الرفع بنجاح!")
-            st.balloons()
-    except Exception as e: st.error(f"خطأ: {e}")
+                
+                # رفع الملف مع تفعيل دعم المجلدات المشتركة
+                file = service.files().create(
+                    body=meta, 
+                    media_body=media, 
+                    supportsAllDrives=True,
+                    fields='id'
+                ).execute()
+                
+                st.success("✅ تم الرفع! ستجد الملف الآن داخل مجلدك 'الجديد'.")
+                st.balloons()
+                
+    except Exception as e:
+        st.error(f"حدث خطأ: {e}")
