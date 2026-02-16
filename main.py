@@ -4,11 +4,12 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# البيانات الثابتة
-FID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
-MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
-# المفتاح منسق كقائمة نصوص لتجنب أي خطأ في الرموز
-PK_PARTS = [
+# --- 1. إعدادات الهوية (تم إصلاح التنسيق نهائياً) ---
+FOLDER_ID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
+CLIENT_EMAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
+
+# وضعنا المفتاح في قائمة (List) لضمان عدم حدوث أخطاء في الرموز أثناء القراءة
+PRIVATE_KEY_PARTS = [
     "-----BEGIN PRIVATE KEY-----\n",
     "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n\n",
     "xso1o/FzJ8XD7o83BVg4Y9qJ3gCkXpnXWkyFtqSHdcBDlGt370RRxDpuQxdrhKcN\n",
@@ -38,33 +39,56 @@ PK_PARTS = [
     "FzuPgWBddTbzyAfiPYFwGW8=\n",
     "-----END PRIVATE KEY-----\n"
 ]
-PK = "".join(PK_PARTS)
+PRIVATE_KEY = "".join(PRIVATE_KEY_PARTS)
 
-st.title("🏛️ نظام الأرشفة")
+# --- 2. وظيفة الاتصال بجوجل درايف ---
+def get_drive_service():
+    info = {
+        "type": "service_account",
+        "project_id": "project-e4fb2fde-9291-482a-b14",
+        "private_key": PRIVATE_KEY,
+        "client_email": CLIENT_EMAIL,
+        "token_uri": "https://oauth2.googleapis.com/token",
+    }
+    creds = service_account.Credentials.from_service_account_info(info)
+    return build('drive', 'v3', credentials=creds)
 
-if st.sidebar.text_input("الرمز:", type="password") == "123":
+# --- 3. واجهة المستخدم (Streamlit) ---
+st.set_page_config(page_title="أرشيف محطة الوزن", page_icon="🏛️")
+st.title("🏛️ نظام الأرشفة الإلكتروني")
+
+# شريط جانبي لرمز الدخول
+password = st.sidebar.text_input("أدخل رمز الدخول:", type="password")
+
+if password == "123":
     try:
-        info = {
-            "type": "service_account",
-            "project_id": "project-e4fb2fde-9291-482a-b14",
-            "private_key": PK,
-            "client_email": MAIL,
-            "token_uri": "https://oauth2.googleapis.com/token",
-        }
-        creds = service_account.Credentials.from_service_account_info(info)
-        service = build('drive', 'v3', credentials=creds)
+        service = get_drive_service()
         
-        # اختبار الاتصال بالمجلد
-        folder = service.files().get(fileId=FID, fields='name').execute()
-        st.success(f"✅ متصل بمجلد: {folder['name']}")
+        # التأكد من الوصول للمجلد
+        folder = service.files().get(fileId=FOLDER_ID, fields='name').execute()
+        st.success(f"✅ تم الاتصال بنجاح بمجلد: {folder['name']}")
         
-        up = st.file_uploader("ارفع صورة الوصل:")
-        if up and st.button("رفع"):
-            meta = {'name': up.name, 'parents': [FID]}
-            media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype=up.type)
-            service.files().create(body=meta, media_body=media).execute()
-            st.success("تم الرفع بنجاح!")
+        # منطقة الرفع
+        st.subheader("تحميل وثيقة جديدة")
+        uploaded_file = st.file_uploader("اختر صورة الوصل (JPG, PNG):", type=["jpg", "jpeg", "png", "pdf"])
+        
+        if uploaded_file is not None:
+            if st.button("🚀 تأكيد الرفع للأرشيف"):
+                with st.spinner('جاري الرفع الآن...'):
+                    file_metadata = {
+                        'name': uploaded_file.name,
+                        'parents': [FOLDER_ID]
+                    }
+                    media = MediaIoBaseUpload(
+                        io.BytesIO(uploaded_file.read()), 
+                        mimetype=uploaded_file.type
+                    )
+                    service.files().create(body=file_metadata, media_body=media).execute()
+                    st.success(f"تم رفع الملف '{uploaded_file.name}' بنجاح!")
+                    st.balloons()
+                    
     except Exception as e:
-        st.error(f"خطأ: {e}")
+        st.error(f"❌ حدث خطأ في النظام: {e}")
+        st.info("نصيحة: تأكد من تفعيل Google Drive API في حسابك.")
 else:
-    st.info("أدخل الرمز 123")
+    st.warning("الرجاء إدخال رمز الدخول الصحيح في القائمة الجانبية للوصول للنظام.")
