@@ -4,7 +4,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# البيانات المستخرجة من صورك
+# بياناتك من الصور السابقة (الرجاء عدم تغييرها)
 FID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
 PK = r"""-----BEGIN PRIVATE KEY-----
@@ -36,8 +36,7 @@ j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
 FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
-st.set_page_config(page_title="أرشفة PDF")
-st.title("🏛️ نظام أرشفة الملفات")
+st.title("🏛️ نظام الأرشفة النهائي")
 
 if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
     try:
@@ -46,15 +45,12 @@ if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
             "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"
         })
         service = build('drive', 'v3', credentials=creds)
-        
-        f = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
-        if f and st.button("تأكيد الرفع للأرشيف"):
-            with st.spinner("جاري المعالجة..."):
-                meta = {'name': f.name, 'parents': [FID]}
-                media = MediaIoBaseUpload(io.BytesIO(f.read()), mimetype='application/pdf')
-                # السطر الذي يحل مشكلة المساحة الظاهرة في صورتك 6d6f850d
-                service.files().create(body=meta, media_body=media, supportsAllDrives=True).execute()
-                st.success("✅ تم الرفع بنجاح لمجلدك!")
-                st.balloons()
+        up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
+        if up and st.button("رفع الملف"):
+            meta = {'name': up.name, 'parents': [FID]}
+            media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+            # السطر الذهبي لحل مشكلة المساحة
+            service.files().create(body=meta, media_body=media, supportsAllDrives=True).execute()
+            st.success("🎉 مبروك يا مصطفى! تم الرفع بنجاح!")
     except Exception as e:
-        st.error(f"خطأ: {e}")
+        st.error(f"يوجد خطأ: {e}")
