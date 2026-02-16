@@ -4,7 +4,10 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# معلومات الحساب
+# رقم المجلد الذي أرسلته أنت الآن
+FOLDER_ID = "1RLkxpJM8CEunpNDUcANE_jVdFII7V5bW"
+
+# معلومات الروبوت
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
 PK = r"""-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n
@@ -35,25 +38,40 @@ j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
 FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
-st.title("🏛️ نظام الأرشفة")
+st.set_page_config(page_title="نظام أرشفة الملفات", layout="centered")
+st.title("🏛️ أرشفة الملفات إلى Google Drive")
 
-up = st.file_uploader("ارفع ملف PDF:", type=["pdf"])
+# واجهة الرفع
+up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
 
-if up and st.button("رفع"):
+if up and st.button("🚀 رفع إلى المجلد"):
     try:
+        # إعداد بيانات الاعتماد
         creds = service_account.Credentials.from_service_account_info({
             "type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
             "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"
         })
         service = build('drive', 'v3', credentials=creds)
 
-        meta = {'name': up.name} # سيتم الرفع للمساحة المشتركة تلقائياً
-        media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
-        
-        # إضافة خاصية الرفع للمساحات المشتركة لتجنب خطأ Quota
-        file = service.files().create(body=meta, media_body=media, supportsAllDrives=True).execute()
-        
-        st.success("✅ تم الرفع! ابحث عن الملف في درايف الخاص بك.")
-        st.balloons()
+        with st.spinner("جاري الرفع الآن..."):
+            # إعداد بيانات الملف ووضعه داخل المجلد المحدد
+            meta = {
+                'name': up.name,
+                'parents': [FOLDER_ID]
+            }
+            media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+            
+            # تنفيذ عملية الرفع مع دعم المجلدات المشتركة
+            file = service.files().create(
+                body=meta, 
+                media_body=media, 
+                supportsAllDrives=True,
+                fields='id, webViewLink'
+            ).execute()
+
+            st.success(f"✅ تم الرفع بنجاح!")
+            st.balloons()
+            st.markdown(f"🔗 [اضغط هنا لفتح الملف في المجلد]({file.get('webViewLink')})")
+            
     except Exception as e:
-        st.error(f"خطأ: {e}")
+        st.error(f"❌ حدث خطأ: {e}")
