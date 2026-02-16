@@ -4,8 +4,12 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# 1. إعدادات الوصول (تم إصلاحها لتعمل داخل الكود مباشرة وتجنب خطأ \N)
-PK = (
+# البيانات مدمجة لضمان عدم حدوث تعارض
+FOLDER_ID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
+CLIENT_EMAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
+
+# المفتاح منسق للعمل فوراً (بدون مشاكل PEM أو رموز غريبة)
+PRIVATE_KEY = (
     "-----BEGIN PRIVATE KEY-----\n"
     "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n\n"
     "xso1o/FzJ8XD7o83BVg4Y9qJ3gCkXpnXWkyFtqSHdcBDlGt370RRxDpuQxdrhKcN\n"
@@ -19,36 +23,32 @@ PK = (
     "-----END PRIVATE KEY-----\n"
 )
 
-INFO = {
-    "type": "service_account",
-    "project_id": "project-e4fb2fde-9291-482a-b14",
-    "private_key": PK,
-    "client_email": "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com",
-    "token_uri": "https://oauth2.googleapis.com/token",
-}
+def get_service():
+    info = {
+        "type": "service_account",
+        "project_id": "project-e4fb2fde-9291-482a-b14",
+        "private_key": PRIVATE_KEY,
+        "client_email": CLIENT_EMAIL,
+        "token_uri": "https://oauth2.googleapis.com/token",
+    }
+    creds = service_account.Credentials.from_service_account_info(info)
+    return build('drive', 'v3', credentials=creds)
 
-FOLDER_ID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
-
-st.set_page_config(page_title="أرشيف محطة الوزن")
-st.title("🏛️ نظام الأرشفة المركزي")
+st.title("🏛️ نظام أرشفة محطة الوزن")
 
 if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
     try:
-        creds = service_account.Credentials.from_service_account_info(INFO)
-        service = build('drive', 'v3', credentials=creds)
-        # فحص الاتصال
+        service = get_service()
         folder = service.files().get(fileId=FOLDER_ID, fields='name').execute()
-        st.success(f"✅ متصل بنجاح بمجلد: {folder['name']}")
+        st.success(f"✅ متصل بنجاح: {folder['name']}")
         
-        up_file = st.file_uploader("ارفع صورة الوصل:")
-        if up_file and st.button("رفع الآن"):
-            with st.spinner("جاري الرفع..."):
-                metadata = {'name': up_file.name, 'parents': [FOLDER_ID]}
-                media = MediaIoBaseUpload(io.BytesIO(up_file.read()), mimetype=up_file.type)
-                service.files().create(body=metadata, media_body=media).execute()
-                st.success("تم الرفع بنجاح!")
-                st.balloons()
+        f = st.file_uploader("ارفع الوصل:")
+        if f and st.button("تأكيد الرفع"):
+            meta = {'name': f.name, 'parents': [FOLDER_ID]}
+            media = MediaIoBaseUpload(io.BytesIO(f.read()), mimetype=f.type)
+            service.files().create(body=meta, media_body=media).execute()
+            st.success("تم الرفع!")
     except Exception as e:
-        st.error(f"حدث خطأ: {e}")
+        st.error(f"تنبيه: {e}")
 else:
     st.info("أدخل الرمز 123 للبدء")
