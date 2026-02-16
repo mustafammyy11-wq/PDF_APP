@@ -2,31 +2,27 @@ import streamlit as st
 import dropbox
 import time
 
-# الرمز الجديد الذي أرسلته (تم تنظيفه تلقائياً)
-TOKEN = "Sl.u.AGSzRDbnUvdUAxw49UmcasJ4qQDR0D86awmmBIlUx3bUn_Q-484mQXP-PaB6d3fwK0NeF_SvJk4gYU3fC-gTJ9uEz0Bs8BCqH4D7K4MUoHH2d96dTWzIXyefsvulmSjZjNHp_OipPuCeC2I4uDDspCE8tBO2yK6plyplyZBSBAe-QHs73Gnbety7AiRkRkcytDVihNcZ8xa2ClLhciclgTcVZml9V5AzLxD1vqDzBoB3B4PnPsSOPbcFxFFS0WteMRzU4_d8C2lbwtEZKjif5aCKlMV1k-SuecklEw9YTLohhU6WWbAL52QGxM7CfzBe3AzwCnMlH8cC7Wgb-QukVwk0s2TEkxg64XnXCT0bx8ZfpaTNmpi2O7tR-imXd7-iRWR3zJPKEOc1A6vgSTVMjxx-LSXc_3KQcK9jCTdIBdbtmUxWdPYbFcFrm2Kcfze-iUDjHlllM7d0RYVn6SABQPHe18tXkUV0FpPhReD4FrhwGY0uPU3lp9FYFf-6QLlPNJUdpgaozQkBQoBq-7NPwpR6nWqsMVLAAUXPeSqWM_gIWIeNwJuZRICpU_g1XGZud81nzoXJl_xsqhuXNzGO13m6ueL7A6_hJtTQOYNF6azloEV-epPGCeEQV7HiBjEL2LlWTI4V4HyxrcPs9n5_tL_PRoxl45tEZJfogx9a5_6SgAmje35sBrxyhzFTGyYS75bLsP6fp4d-E8Q-cL6d0dOmVRsFBkx9_5my3Y55O81Z3LXlGfsVr-NWyKnouOqKTT7jbol0H14RJb-P6wY5a_JnJ_RrV1AvI_kft89mPZ8zQfL63EFyms6Hyfmrl4XQE0Zd-QhLubzGq4UqCU7lBwB1XYKQfyMFCJyUY138w7T6atPc7dLrcoyiC7x7x84IgS5lNyg4HaPY2h_Fz7wT6BUOqMER74rBSvacyU9BJ0eK9MC71lAdGyw6gJBqlYwd75-8K3rG-ReISEsCxGB_Zkfj_RhWIPdpdpqbUiJtigCucLoAPJa4y3YuG_T0Xm0ImHtFnhi_FLZGP26JDIbGIjFc2pf1Uw3cobCnZ4XXZmXwjO79jfZxIY2HBaiqFsrlltuz5tLiA_TehehJTlc6xnQLCHnYbjtFkc16Cr77Q4K5kDrP_TxuR1Kgn8CPPAEaBZ-ZR6CgjiggQ-I0GmDNv02tiJnWZrUGp2LxuF_i9PdTl7rmBSJCayABQYTZZN7arcBMk1CWwzjluqLj96RDfuAR6y1mNUXGcoDS0lXvbCWII0HOXbQegS5aroSGAh5bE0guAAKcWd-BltPfl62vVn09NZp4KlumkvxBETs8qx8JNYPQkz79zroMVW3SIbyzTB63TLpClZA-tkvYcBFPYrGLC0LQwjHBn9oJ031SJcw7VdsUfl0RlLdhBti42QNHdGRn6Y7RlY1Fs6WI7CuMINeGjjfNAAPYh0QLMpgFQbcWwEhTblGd9AXrrFfqFY6QXgQ"
+# الرمز الجديد الذي أرسلته لي في رسالتك الأخيرة
+TOKEN = "sl.u.AGRMW3ytxebJSsw0BX96dy0VoF0Zmi3IZWyjxUXmulyYyfPpBbUKk3nUbJ3GeaAnaLI9o4fMvk-_PsmXcbbcbO-8ATGYuBnJjOUTjPih33q46vR38ZbJ_Ti-8YG_3-9sj48Q9bkhPdSNPA3_ikeYjtCsxDrzEOI5mLdlPPK6vB6dhum4s4n0-5NfJwoIEaSpxOxSwy1I402jtdOGzof5QGSpUhjBUDLoPSNHwkYSxfPVFAvDGWBMylN2U9RTakATU93phWKHKZJ2lkRl5BXQTENexW-h1eaujqwSkVwAdYPTOuQ0KDsxbiA7O-u6Aae8aet1NNP7xrix9Bt9D9aIIek84wT62BqIhcBwGFmjzp_BZHUh7qi4Y2HPuxQMtwXrzwNfWDEwyc6HTkL-kCJejtEkhtTlc5IOWMZtM3OyIHcSiWzTNxfcPHy7ZSkpJuwJj-loFjReX3hUSYDUfmzBoqWKQd-6J9Mem0zq6FAK4mV2IocwBU1wKetPZABhVt_h96rgLKDhV6tT3FvWWmfv6Bu70HsxR16sTtYgaogp6WhkVJgaXKBBBoHE8vHuyIyw1qdzI5EKO6_aDmJJr9aEtsQHWMuAMv7FYvmoRdtABjQJG17e3J9AGWZHEoXpEcjBLj6oky9zHKrNSWUFs43na6m66AgTYK7Uld4ClqMp6gXu_d5WKgtisWIOuEzEwcXdnCbOkyDVlCmttKcMeXse0eferVoZw6W8Ba2Liuvh4PKSEp7o6AcKqSVe6u3y70M-WdtYXqaYPdz1IF5KAeiJYbzUjBl15uzm2oNaXJ4V56x9sePd1OhGiSquGnPUecei4A1gZA76H5nhAUyx64YwyWoaW8105yD-E8-QsliDoK70PfFtwkzgcLk_F4l9PZ2tkoWrf8lWhojh7MWTNT_d3OtsYno8zLRR2sDKmZwgwj4s55m2bg3kTnjI5kQrKMfh3p0k8gQEMnmGLNxI4vX7OEC8RAohLuPMfTTmMI_DpU0UwQKX6ux4tVxzvta1EPeRtmLbvvUcdkpcnQ5JRSU03dsZrrBqnvu10Gbttf60xEGOkpWsRqYgaOpyWgJd0pvPaSIxKRqWRUKe4c_CR_l1AiU3q1CfrXxwm8mBDtOtwFZi9pkXkkmOTzeB9WKl52Pg6OkGUA7_1Pks4jNF1ZJ44pPHgoJiikMIZgtixXIaWAJ48foqwuL4kvg3lg9iRsoHJsZOvJNHM6UcS1lXXxQNhP97KZ1MGyfhMh_kkADFepJ8ry6nz91NOD70XOYpJAR8aBe0dwSL1EkoVacq-4O2sJmsOV5hBUvPtXo-TltVrRF9zBdON1rc83xaZ2QGZJPb-6nka0CkZ-N6nZewuE1IOJ6eWURnvYhrzz9hsDyREb2iHOzIpKco3oWEkg-R6wwGI243F4lCoB0AAvpLcpxTRvTXiFUe828UY2S9gnGHWYonouU3R_WpbEn6V3z4Y9aNGbw"
 
-st.set_page_config(page_title="أرشيف مصطفى")
-st.title("🏛️ نظام أرشفة مصطفى (Dropbox)")
+st.set_page_config(page_title="أرشيف مصطفى الجديد")
+st.title("🏛️ نظام أرشفة مصطفى")
 
 up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
 
-if up and st.button("🚀 بدء الرفع"):
+if up and st.button("🚀 رفع الملف"):
     try:
-        dbx = dropbox.Dropbox(TOKEN)
+        # استخدام .strip() لإزالة أي مسافات زائدة من النسخ
+        dbx = dropbox.Dropbox(TOKEN.strip())
         
-        # استخدام الوقت الحالي كاسم للملف لضمان عدم تكرار الأسماء وتجنب مشاكل اللغة
-        file_name = f"/doc_{int(time.time())}.pdf"
+        # تسمية الملف برقم الوقت لضمان النجاح التام وتفادي الأسماء العربية
+        safe_name = f"/doc_{int(time.time())}.pdf"
         
-        with st.spinner("جاري التواصل مع Dropbox..."):
-            dbx.files_upload(up.read(), file_name, mode=dropbox.files.WriteMode.overwrite)
+        with st.spinner("جاري الرفع..."):
+            dbx.files_upload(up.read(), safe_name, mode=dropbox.files.WriteMode.overwrite)
             
-        st.success("✅ مبروك يا مصطفى! تم الرفع بنجاح تام.")
+        st.success("✅ مبروك يا مصطفى! تم الرفع بنجاح.")
         st.balloons()
         
     except Exception as e:
-        if "expired" in str(e).lower():
-            st.error("❌ انتهت صلاحية الرمز، يرجى توليد واحد جديد من Dropbox.")
-        elif "scope" in str(e).lower():
-            st.error("❌ لم يتم حفظ الصلاحيات! تأكد من ضغط زر Submit في Dropbox.")
-        else:
-            st.error(f"❌ حدث خطأ: {e}")
+        st.error(f"❌ حدث خطأ: {e}")
