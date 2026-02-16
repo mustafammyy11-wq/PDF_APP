@@ -4,7 +4,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# الرقم الصحيح والدقيق لمجلدك (من صورتك الرابط يبدأ بـ 1-2fiK)
+# الرقم الدقيق لمجلدك كما في الرابط
 FID = "1-2fiKxjnbAWlIFSNVxxdoqYEa0KuuBmh"
 
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
@@ -38,8 +38,7 @@ FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
 st.title("🏛️ نظام الأرشفة")
-
-if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
+if st.sidebar.text_input("الرمز:", type="password") == "123":
     try:
         creds = service_account.Credentials.from_service_account_info({
             "type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
@@ -47,17 +46,14 @@ if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
         })
         service = build('drive', 'v3', credentials=creds)
         
-        up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
-        if up and st.button("🚀 رفع الملف الآن"):
+        up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
+        if up and st.button("🚀 رفع"):
             with st.spinner("جاري الرفع..."):
-                try:
-                    meta = {'name': up.name, 'parents': [FID]}
-                    media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
-                    # الرفع للمجلد مع دعم المجلدات المشتركة
-                    service.files().create(body=meta, media_body=media, supportsAllDrives=True).execute()
-                    st.success("✅ تم الرفع بنجاح! الملف الآن داخل مجلدك.")
-                    st.balloons()
-                except Exception as e:
-                    st.error(f"حدث خطأ: تأكد من مشاركة المجلد مع البريد: {MAIL}")
+                meta = {'name': up.name, 'parents': [FID]}
+                media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+                # هذا السطر سيضع الملف في المجلد المشترك فوراً
+                service.files().create(body=meta, media_body=media, supportsAllDrives=True).execute()
+                st.success("✅ تم الرفع! افتح مجلد 'الجديد' الآن وستجده.")
+                st.balloons()
     except Exception as e:
-        st.error(f"خطأ في المصادقة: {e}")
+        st.error(f"خطأ: {e}")
