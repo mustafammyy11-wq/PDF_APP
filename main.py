@@ -4,11 +4,11 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# 1. إعدادات الهوية والمجلد
-FOLDER_ID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
-CLIENT_EMAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
+# 1. إعدادات الهوية والمجلد (لا تغيرها)
+FID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
+MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
 
-# 2. المفتاح الخاص بتنسيق يمنع أخطاء التنسيق (SyntaxError)
+# 2. المفتاح الخاص مكتوب بطريقة تمنع خطأ Unicode (التنسيق)
 PK = r"""-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n
 xso1o/FzJ8XD7o83BVg4Y9qJ3gCkXpnXWkyFtqSHdcBDlGt370RRxDpuQxdrhKcN
@@ -38,41 +38,37 @@ j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
 FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
-# 3. واجهة التطبيق
-st.set_page_config(page_title="نظام الأرشفة", layout="centered")
+st.set_page_config(page_title="أرشفة PDF")
 st.title("🏛️ نظام أرشفة الـ PDF")
 
-pwd = st.sidebar.text_input("رمز الدخول:", type="password")
-
-if pwd == "123":
+if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
     try:
-        # تجهيز الاتصال
-        creds_info = {
+        # إعداد الاتصال
+        info = {
             "type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
-            "private_key": PK, "client_email": CLIENT_EMAIL,
+            "private_key": PK, "client_email": MAIL,
             "token_uri": "https://oauth2.googleapis.com/token",
         }
-        creds = service_account.Credentials.from_service_account_info(creds_info)
+        creds = service_account.Credentials.from_service_account_info(info)
         service = build('drive', 'v3', credentials=creds)
-
-        # منطقة الرفع
+        
+        # رفع الملف
         pdf_file = st.file_uploader("اختر ملف PDF:", type=["pdf"])
-        if pdf_file:
-            if st.button("تأكيد الرفع الآن"):
-                with st.spinner("جاري الحفظ..."):
-                    file_metadata = {'name': pdf_file.name, 'parents': [FOLDER_ID]}
-                    media = MediaIoBaseUpload(io.BytesIO(pdf_file.read()), mimetype='application/pdf')
-                    
-                    # السطر السحري لحل مشكلة المساحة (Quota)
-                    service.files().create(
-                        body=file_metadata, 
-                        media_body=media, 
-                        supportsAllDrives=True  # هذا السطر هو الحل!
-                    ).execute()
-                    
-                    st.success(f"✅ تم حفظ {pdf_file.name} بنجاح!")
-                    st.balloons()
+        if pdf_file and st.button("💾 تأكيد الرفع للأرشيف"):
+            with st.spinner("جاري الرفع..."):
+                metadata = {'name': pdf_file.name, 'parents': [FID]}
+                media = MediaIoBaseUpload(io.BytesIO(pdf_file.read()), mimetype='application/pdf')
+                
+                # السطر الذي يحل مشكلة Quota في الصورة 6d6f850d
+                service.files().create(
+                    body=metadata, 
+                    media_body=media, 
+                    supportsAllDrives=True 
+                ).execute()
+                
+                st.success("✅ تم الرفع بنجاح!")
+                st.balloons()
     except Exception as e:
-        st.error(f"خطأ في الرفع: {e}")
+        st.error(f"خطأ: {e}")
 else:
-    st.info("أدخل الرمز 123")
+    st.info("أدخل الرمز 123 للبدء")
