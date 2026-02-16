@@ -37,4 +37,3 @@ if st.sidebar.text_input("الرمز:", type="password") == "123":
             st.success("تم الرفع!")
     except Exception as e:
         st.error(f"تنبيه: تأكد من تفعيل Drive API من الرابط. الخطأ: {e}")
-
