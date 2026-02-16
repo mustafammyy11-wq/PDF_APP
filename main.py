@@ -4,7 +4,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# معلومات الحساب
+# معلومات الروبوت الخاصة بك
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
 PK = r"""-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n
@@ -35,31 +35,13 @@ j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
 FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
-st.title("🏛️ نظام الأرشفة")
+st.title("🏛️ نظام الأرشفة الذكي")
 
-if st.sidebar.text_input("الرمز:", type="password") == "123":
+# خانة الرفع
+up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
+
+if up and st.button("🚀 رفع الآن"):
     try:
-        creds = service_account.Credentials.from_service_account_info({
-            "type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
-            "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"
-        })
-        service = build('drive', 'v3', credentials=creds)
-        
-        up = st.file_uploader("اختر ملف:", type=["pdf"])
-        if up and st.button("🚀 رفع"):
-            with st.spinner("جاري الرفع..."):
-                meta = {'name': up.name}
-                media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
-                
-                # الرفع مع طلب رابط المعاينة
-                file = service.files().create(body=meta, media_body=media, fields='id, webViewLink').execute()
-                
-                # جعل الملف متاحاً للعرض لأي شخص معه الرابط
-                service.permissions().create(fileId=file.get('id'), body={'type': 'anyone', 'role': 'viewer'}).execute()
-                
-                st.success("✅ تم الرفع بنجاح!")
-                # الرابط الذي سيحل لك كل المشاكل
-                st.markdown(f"### 🔗 [اضغط هنا لفتح الملف فوراً]({file.get('webViewLink')})")
-                st.balloons()
-    except Exception as e:
-        st.error(f"خطأ: {e}")
+        # إعداد الاتصال
+        cre
+
