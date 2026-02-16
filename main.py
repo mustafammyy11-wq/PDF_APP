@@ -4,8 +4,8 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# الرقم الدقيق لمجلدك كما في الرابط
-FID = "1-2fiKxjnbAWlIFSNVxxdoqYEa0KuuBmh"
+# معرف المجلد الدقيق (تم تنظيفه من أي مسافات)
+FID = "1-2fiKxjnbAWlIFSNVxxdoqYEa0KuuBmh".strip()
 
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
 PK = r"""-----BEGIN PRIVATE KEY-----
@@ -38,7 +38,7 @@ FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
 st.title("🏛️ نظام الأرشفة")
-if st.sidebar.text_input("الرمز:", type="password") == "123":
+if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
     try:
         creds = service_account.Credentials.from_service_account_info({
             "type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
@@ -47,13 +47,23 @@ if st.sidebar.text_input("الرمز:", type="password") == "123":
         service = build('drive', 'v3', credentials=creds)
         
         up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
-        if up and st.button("🚀 رفع"):
-            with st.spinner("جاري الرفع..."):
-                meta = {'name': up.name, 'parents': [FID]}
-                media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
-                # هذا السطر سيضع الملف في المجلد المشترك فوراً
-                service.files().create(body=meta, media_body=media, supportsAllDrives=True).execute()
-                st.success("✅ تم الرفع! افتح مجلد 'الجديد' الآن وستجده.")
-                st.balloons()
+        if up and st.button("🚀 رفع الآن"):
+            with st.spinner("جاري الرفع للمجلد..."):
+                try:
+                    meta = {'name': up.name, 'parents': [FID]}
+                    media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+                    
+                    # الرفع للمجلد المشترك
+                    file = service.files().create(
+                        body=meta, 
+                        media_body=media, 
+                        supportsAllDrives=True,
+                        fields='id'
+                    ).execute()
+                    
+                    st.success("✅ مبروك! الملف الآن داخل مجلد 'الجديد'.")
+                    st.balloons()
+                except Exception as e:
+                    st.error(f"تأكد من تحديث صفحة درايف ومشاركة المجلد: {e}")
     except Exception as e:
         st.error(f"خطأ: {e}")
