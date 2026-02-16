@@ -4,7 +4,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# معلومات الروبوت الخاصة بك
+# معلومات حسابك
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
 PK = r"""-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n
@@ -35,13 +35,34 @@ j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
 FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
-st.title("🏛️ نظام الأرشفة الذكي")
+st.set_page_config(page_title="نظام الأرشفة", page_icon="🏛️")
+st.title("🏛️ نظام الأرشفة النهائي")
 
-# خانة الرفع
 up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
 
-if up and st.button("🚀 رفع الآن"):
+if up and st.button("🚀 رفع الملف الآن"):
     try:
-        # إعداد الاتصال
-        cre
+        creds = service_account.Credentials.from_service_account_info({
+            "type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
+            "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"
+        })
+        service = build('drive', 'v3', credentials=creds)
 
+        with st.spinner("جاري معالجة الملف والرفع..."):
+            # الرفع بدون تحديد مجلد لتجنب خطأ 404 المجلد غير موجود
+            meta = {'name': up.name}
+            media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+            file = service.files().create(body=meta, media_body=media, fields='id, webViewLink').execute()
+            
+            # جعل الملف متاحاً للعرض لكي يفتح معك الرابط
+            service.permissions().create(fileId=file.get('id'), body={'type': 'anyone', 'role': 'viewer'}).execute()
+
+            st.success("✅ تم الرفع بنجاح تام!")
+            st.balloons()
+            
+            # الرابط السحري الذي سيفتح الملف المرفوع
+            st.markdown(f"### 📥 [اضغط هنا لفتح الملف الذي رفعته الآن]({file.get('webViewLink')})")
+            st.info("ملاحظة: الرابط أعلاه سيفتح الملف مباشرة في المتصفح.")
+            
+    except Exception as e:
+        st.error(f"❌ حدث خطأ تقني: {e}")
