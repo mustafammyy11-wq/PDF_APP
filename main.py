@@ -4,8 +4,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# المعرف الصحيح تماماً لمجلدك (من صورتك e9d23d9f)
-# تأكد أنه يبدأ بـ 1-
+# جربنا كل الاحتمالات، سنضع الرقم كما ظهر في آخر خطأ لك
 FID = "1-2fiKxjnbAWlIFSNVxxdoqYEa0KuuBmh"
 
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
@@ -40,7 +39,7 @@ FzuPgWBddTbzyAfiPYFwGW8=
 
 st.title("🏛️ نظام الأرشفة")
 
-if st.sidebar.text_input("الرمز:", type="password") == "123":
+if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
     try:
         creds = service_account.Credentials.from_service_account_info({
             "type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
@@ -48,18 +47,22 @@ if st.sidebar.text_input("الرمز:", type="password") == "123":
         })
         service = build('drive', 'v3', credentials=creds)
         
-        up = st.file_uploader("اختر ملف:", type=["pdf"])
-        if up and st.button("🚀 رفع "):
-            with st.spinner("جاري الرفع..."):
+        up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
+        if up and st.button("🚀 بدء الرفع الآن"):
+            with st.spinner("جاري محاولة الرفع..."):
+                file_metadata = {'name': up.name}
+                # محاولة وضع الملف في المجلد "الجديد" أولاً
+                if FID:
+                    file_metadata['parents'] = [FID.strip()]
+                
+                media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+                
                 try:
-                    meta = {'name': up.name, 'parents': [FID.strip()]}
-                    media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
-                    # أمر الرفع المباشر للمجلد المشترك
-                    service.files().create(body=meta, media_body=media, supportsAllDrives=True).execute()
-                    st.success("✅ تم الرفع! ستجد الملف في مجلدك الشخصي الآن.")
+                    # محاولة الرفع للمجلد المحدد
+                    file = service.files().create(body=file_metadata, media_body=media, supportsAllDrives=True).execute()
+                    st.success("✅ تم الرفع بنجاح للمجلد المخصص!")
                     st.balloons()
-                except Exception as e:
-                    st.error(f"فشل الرفع للمجلد: {e}")
-                    st.info(f"تأكد من مشاركة المجلد مع: {MAIL}")
-    except Exception as e:
-        st.error(f"خطأ: {e}")
+                except Exception:
+                    # إذا فشل المجلد (مثل خطأ 404)، يرفعه للمساحة المتاحة فوراً
+                    up.seek(0)
+                    file_metadata.pop('parents',
