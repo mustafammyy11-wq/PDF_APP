@@ -8,7 +8,7 @@ import io
 FOLDER_ID = "1RLkxpJM8CEunpNDUcANE_jVdFII7V5bW"
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
 
-# هذا التنسيق يحل مشكلة PEM نهائياً
+# المفتاح السري تم تنسيقه ليعمل مباشرة دون أخطاء PEM
 PK = "-----BEGIN PRIVATE KEY-----\n" + \
 "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n\n" + \
 "xso1o/FzJ8XD7o83BVg4Y9qJ3gCkXpnXWkyFtqSHdcBDlGt370RRxDpuQxdrhKcN\n" + \
@@ -22,4 +22,51 @@ PK = "-----BEGIN PRIVATE KEY-----\n" + \
 "hWsKOFHCMqLk0Dzx2R2LfgpdOwEiEKCC4Qwp/sSOWROeQ75jXkxMMI0eMplsfFmA\n" + \
 "Nag52aSw41ZAHFGEs/336Yydl+4SArsJd/p9pQ7Yg8FTJo+v3rvEHKSjOqMSnXXC\n" + \
 "EQ6MQm0eYyF//xW3QUMJ6uwiB9nVw1o08zy/+sPM4QKBgQD7+UemBYX0tHXkfbAk\n" + \
-"O316+se
+"O316+seEk+vpWqzz8TYHAE941ciaMQe4/Rs13lzWd2TvyIR+VBq3bTUYSvNjc+4B\n" + \
+"aVs8iaB51L4Ud/qmb+imX6Ul9iQsOZxFv152qHVvxmnd1l8OO9e1GWKYTXFBLjHn\n" + \
+"72H/A4b3NnLA2ka7PFEZQvXh2QKBgQDgQOFkDbjdhMruL/fF5vq37HwUzSq2ISKe\n" + \
+"F2MsQJNld3ZoULyRipWYXIM7uCA/eP6hNmYBTaKBr7kDzHLCEY2u08J7sFMWx/9a\n" + \
+"sIgSJUGtz3sooe+e/GIRcedFNiqVOUl60S6tdIYkBXKCEbBT2WNN0HwHdWVOPbJx\n" + \
+"r/9qFz/VtQKBgQC8m7ul6jx7DxmwDuTqOh2TEGSIOLE920Ha15M5amIScPPXdxvw\n" + \
+"vITBrdCQOI61bcK/TPUyl+xGYtQMfZqKM/K3Pc2BZF1jtOtJ6jqbTryvza8F65mu\n" + \
+"G7D54N8G694Sz4QXg3PTe0zx9AXyZEG2+ti/qkQ8h+UdtkV7oYqS/ixPAQKBgDwX\n" + \
+"Bo5B4wxwndPvRIxiFUKdeq40P8Kn5FfKWoesEhL5TOAs6ipxoR4/g+bHstRvPoPC\n" + \
+"SNkGjYoEpSXwbbu06mszUQTFva34D2OktAFwvEWvuAeuRMAsTrbv95GjLwvnWtov\n" + \
+"HTvbYmpaj1FtHfuJ38MlH2b8PRYXEC7Igz9RVYiVAoGAImaNeSPbdKLfTG90gNrP\n" + \
+"j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU\n" + \
+"4bccccv4fBMmkGYHsHsph+qNGiwPaKz6TmypAcspIGM06ajVLH1zLzw8EfDFHUu0\n" + \
+"FzuPgWBddTbzyAfiPYFwGW8=\n" + \
+"-----END PRIVATE KEY-----\n"
+
+st.title("🏛️ نظام أرشفة مصطفى")
+
+up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
+
+if up and st.button("🚀 رفع الآن"):
+    try:
+        info_dict = {
+            "type": "service_account",
+            "project_id": "project-e4fb2fde-9291-482a-b14",
+            "private_key": PK,
+            "client_email": MAIL,
+            "token_uri": "https://oauth2.googleapis.com/token",
+        }
+        creds = service_account.Credentials.from_service_account_info(info_dict)
+        service = build('drive', 'v3', credentials=creds)
+
+        with st.spinner("جاري تخطي قيود المساحة..."):
+            meta = {'name': up.name, 'parents': [FOLDER_ID]}
+            media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+            
+            # رفع الملف مع تفعيل دعم المساحة المشتركة لحل خطأ 403
+            file = service.files().create(
+                body=meta, 
+                media_body=media, 
+                supportsAllDrives=True
+            ).execute()
+            
+            st.success("✅ أخيراً! تم الرفع بنجاح يا بطل.")
+            st.balloons()
+            
+    except Exception as e:
+        st.error(f"⚠️ فشل الرفع: {e}")
