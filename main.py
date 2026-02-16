@@ -4,11 +4,9 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# 1. إعدادات الهوية والمجلد (لا تغيرها)
+# البيانات المستخرجة من صورك
 FID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
 MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
-
-# 2. المفتاح الخاص مكتوب بطريقة تمنع خطأ Unicode (التنسيق)
 PK = r"""-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n
 xso1o/FzJ8XD7o83BVg4Y9qJ3gCkXpnXWkyFtqSHdcBDlGt370RRxDpuQxdrhKcN
@@ -39,36 +37,24 @@ FzuPgWBddTbzyAfiPYFwGW8=
 -----END PRIVATE KEY-----"""
 
 st.set_page_config(page_title="أرشفة PDF")
-st.title("🏛️ نظام أرشفة الـ PDF")
+st.title("🏛️ نظام أرشفة الملفات")
 
 if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
     try:
-        # إعداد الاتصال
-        info = {
+        creds = service_account.Credentials.from_service_account_info({
             "type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
-            "private_key": PK, "client_email": MAIL,
-            "token_uri": "https://oauth2.googleapis.com/token",
-        }
-        creds = service_account.Credentials.from_service_account_info(info)
+            "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"
+        })
         service = build('drive', 'v3', credentials=creds)
         
-        # رفع الملف
-        pdf_file = st.file_uploader("اختر ملف PDF:", type=["pdf"])
-        if pdf_file and st.button("💾 تأكيد الرفع للأرشيف"):
-            with st.spinner("جاري الرفع..."):
-                metadata = {'name': pdf_file.name, 'parents': [FID]}
-                media = MediaIoBaseUpload(io.BytesIO(pdf_file.read()), mimetype='application/pdf')
-                
-                # السطر الذي يحل مشكلة Quota في الصورة 6d6f850d
-                service.files().create(
-                    body=metadata, 
-                    media_body=media, 
-                    supportsAllDrives=True 
-                ).execute()
-                
-                st.success("✅ تم الرفع بنجاح!")
+        f = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
+        if f and st.button("تأكيد الرفع للأرشيف"):
+            with st.spinner("جاري المعالجة..."):
+                meta = {'name': f.name, 'parents': [FID]}
+                media = MediaIoBaseUpload(io.BytesIO(f.read()), mimetype='application/pdf')
+                # السطر الذي يحل مشكلة المساحة الظاهرة في صورتك 6d6f850d
+                service.files().create(body=meta, media_body=media, supportsAllDrives=True).execute()
+                st.success("✅ تم الرفع بنجاح لمجلدك!")
                 st.balloons()
     except Exception as e:
         st.error(f"خطأ: {e}")
-else:
-    st.info("أدخل الرمز 123 للبدء")
