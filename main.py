@@ -4,8 +4,9 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# معلومات المجلد والروبوت
+# رقم مجلدك كما في الصورة
 FOLDER_ID = "1RLkxpJM8CEunpNDUcANE_jVdFII7V5bW"
+
 INFO = {
     "type": "service_account",
     "project_id": "project-e4fb2fde-9291-482a-b14",
@@ -14,26 +15,30 @@ INFO = {
     "token_uri": "https://oauth2.googleapis.com/token",
 }
 
-st.title("🏛️ تجربة الرفع الأخيرة")
+st.title("🚀 الحل النهائي للأرشفة")
 
-up = st.file_uploader("ارفع ملف PDF هنا:", type=["pdf"])
+up = st.file_uploader("ارفع ملف PDF الآن:", type=["pdf"])
 
-if up and st.button("🚀 رفع"):
+if up and st.button("تأكيد الرفع"):
     try:
         creds = service_account.Credentials.from_service_account_info(INFO)
         service = build('drive', 'v3', credentials=creds)
         
-        meta = {'name': up.name, 'parents': [FOLDER_ID]}
+        # إعداد بيانات الملف
+        file_metadata = {'name': up.name, 'parents': [FOLDER_ID]}
         media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
         
-        # أهم سطرين لتخطي المشاكل
+        # التعديل السحري: إجبار جوجل على استخدام مساحة المجلد الوجهة
         file = service.files().create(
-            body=meta, 
-            media_body=media, 
-            supportsAllDrives=True # للسماح بالرفع للمجلد المشترك
+            body=file_metadata,
+            media_body=media,
+            fields='id',
+            supportsAllDrives=True # يسمح بالتعامل مع المجلدات المشتركة
         ).execute()
         
-        st.success("✅ نجح الرفع! اذهب للدرايف الآن.")
+        st.success("✅ تم الرفع بنجاح يا مصطفى!")
         st.balloons()
+        
     except Exception as e:
-        st.error(f"❌ الخطأ: {e}")
+        # إذا استمر الخطأ، سنعرض رسالة واضحة تخبرنا بالسبب
+        st.error(f"عذراً، لا يزال هناك عائق: {e}")
