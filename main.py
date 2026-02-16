@@ -4,9 +4,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import io
 
-# البيانات النهائية
-FID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
-MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
+# 1. إعدادات الوصول (تم إصلاحها لتعمل داخل الكود مباشرة وتجنب خطأ \N)
 PK = (
     "-----BEGIN PRIVATE KEY-----\n"
     "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n\n"
@@ -21,19 +19,36 @@ PK = (
     "-----END PRIVATE KEY-----\n"
 )
 
-st.set_page_config(page_title="الأرشيف المركزي")
-if st.sidebar.text_input("الرمز:", type="password") == "123":
+INFO = {
+    "type": "service_account",
+    "project_id": "project-e4fb2fde-9291-482a-b14",
+    "private_key": PK,
+    "client_email": "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com",
+    "token_uri": "https://oauth2.googleapis.com/token",
+}
+
+FOLDER_ID = "1O9RsIkXihdZrGMaLrALM3dYDjm6x23nL"
+
+st.set_page_config(page_title="أرشيف محطة الوزن")
+st.title("🏛️ نظام الأرشفة المركزي")
+
+if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
     try:
-        info = {"type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14", "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"}
-        creds = service_account.Credentials.from_service_account_info(info)
+        creds = service_account.Credentials.from_service_account_info(INFO)
         service = build('drive', 'v3', credentials=creds)
-        folder = service.files().get(fileId=FID, fields='name').execute()
-        st.success(f"✅ متصل بمجلد: {folder['name']}")
-        f = st.file_uploader("ارفع الوصل:")
-        if f and st.button("رفع"):
-            meta = {'name': f.name, 'parents': [FID]}
-            media = MediaIoBaseUpload(io.BytesIO(f.read()), mimetype=f.type)
-            service.files().create(body=meta, media_body=media).execute()
-            st.success("تم الرفع!")
+        # فحص الاتصال
+        folder = service.files().get(fileId=FOLDER_ID, fields='name').execute()
+        st.success(f"✅ متصل بنجاح بمجلد: {folder['name']}")
+        
+        up_file = st.file_uploader("ارفع صورة الوصل:")
+        if up_file and st.button("رفع الآن"):
+            with st.spinner("جاري الرفع..."):
+                metadata = {'name': up_file.name, 'parents': [FOLDER_ID]}
+                media = MediaIoBaseUpload(io.BytesIO(up_file.read()), mimetype=up_file.type)
+                service.files().create(body=metadata, media_body=media).execute()
+                st.success("تم الرفع بنجاح!")
+                st.balloons()
     except Exception as e:
-        st.error(f"تنبيه: تأكد من تفعيل Drive API من الرابط. الخطأ: {e}")
+        st.error(f"حدث خطأ: {e}")
+else:
+    st.info("أدخل الرمز 123 للبدء")
