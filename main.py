@@ -10,64 +10,60 @@ DB_FILE = "files_db.csv"
 
 st.set_page_config(page_title="تطبيق محطات الوزن", page_icon="🚚", layout="centered")
 
-# --- تنسيق CSS لإجبار الواجهة على اللون الأسود والتصميم المودرن ---
+# --- تنسيق CSS للواجهة البيضاء (Clean White UI) ---
 st.markdown("""
     <style>
-    /* جعل الخلفية سوداء بالكامل */
+    /* جعل الخلفية بيضاء بالكامل */
     .stApp {
-        background-color: #0b0e14 !important;
-        color: #ffffff !important;
+        background-color: #ffffff !important;
+        color: #2c3e50 !important;
     }
-    /* تنسيق الحاوية الرئيسية */
-    .main {
-        background-color: #0b0e14;
-    }
-    /* لوجو الشاحنة */
+    /* تنسيق لوجو الشاحنة */
     .truck-header {
-        font-size: 100px;
+        font-size: 80px;
         text-align: center;
-        margin-top: 20px;
-        filter: drop-shadow(0 0 10px #00c6ff);
-    }
-    /* واجهة الباسورد */
-    .login-box {
-        background-color: #1e2630;
-        padding: 30px;
-        border-radius: 20px;
-        border: 1px solid #3e4957;
-        text-align: center;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        margin-top: 10px;
     }
     /* الأزرار الملونة */
     .stButton>button {
         width: 100%;
-        border-radius: 15px !important;
-        background: linear-gradient(90deg, #00c6ff 0%, #0072ff 100%) !important;
+        border-radius: 12px !important;
+        background: linear-gradient(90deg, #0072ff 0%, #00c6ff 100%) !important;
         color: white !important;
         border: none !important;
         font-weight: bold !important;
-        height: 3em;
-        font-size: 18px;
+        height: 3.2em;
+        font-size: 16px;
+        box-shadow: 0 4px 15px rgba(0,114,255,0.2);
     }
-    /* كروت الملفات */
+    /* كروت الملفات في الخلفية البيضاء */
     .file-card {
-        background-color: #1e2630;
-        padding: 15px;
-        border-radius: 12px;
-        border-right: 6px solid #00c6ff;
-        margin-bottom: 10px;
+        background-color: #f8f9fa;
+        padding: 18px;
+        border-radius: 15px;
+        border-right: 6px solid #0072ff;
+        margin-bottom: 12px;
+        color: #2c3e50;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
-    /* تعديل لون النصوص في التبويبات */
+    /* تعديل التبويبات */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 24px;
-        background-color: transparent;
+        background-color: #f1f3f5;
+        border-radius: 10px;
+        padding: 5px;
     }
     .stTabs [data-baseweb="tab"] {
-        color: #8899ac;
         font-weight: bold;
+        color: #495057;
     }
     .stTabs [aria-selected="true"] {
-        color: #00c6ff !important;
+        background-color: #ffffff !important;
+        border-radius: 8px !important;
+        color: #0072ff !important;
+    }
+    /* حقول الإدخال */
+    input {
+        border-radius: 10px !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -78,22 +74,21 @@ if "authenticated" not in st.session_state:
 
 if not st.session_state["authenticated"]:
     st.markdown('<div class="truck-header">🚚</div>', unsafe_allow_html=True)
-    st.markdown("<h2 style='text-align: center; color: white;'>تطبيق محطات الوزن</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #8899ac;'>يرجى إدخال رمز الدخول للمتابعة</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #2c3e50;'>تطبيق محطات الوزن</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #7f8c8d;'>نظام الأرشفة - يرجى تسجيل الدخول</p>", unsafe_allow_html=True)
     
-    # وضع حقل الباسورد في منتصف الصفحة
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        password = st.text_input("", type="password", placeholder="كلمة المرور هنا...")
-        if st.button("🚀 تسجيل الدخول"):
+        password = st.text_input("", type="password", placeholder="كلمة المرور...")
+        if st.button("🚀 دخول للنظام"):
             if password == "123":
                 st.session_state["authenticated"] = True
                 st.rerun()
             else:
-                st.error("❌ الرمز غير صحيح")
+                st.error("❌ الرمز خاطئ")
     st.stop()
 
-# --- بعد الدخول (الدوال والواجهة) ---
+# --- الدوال البرمجية ---
 def load_data():
     if os.path.exists(DB_FILE): return pd.read_csv(DB_FILE)
     return pd.DataFrame(columns=["الاسم", "file_id"])
@@ -110,14 +105,15 @@ def get_telegram_download_link(file_id):
         return f"https://api.telegram.org/file/bot{BOT_TOKEN}/{res['result']['file_path']}"
     except: return None
 
-# الواجهة الرئيسية
+# --- الواجهة الرئيسية ---
 st.markdown('<div style="text-align:right; font-size:40px;">🚚</div>', unsafe_allow_html=True)
-st.markdown("<h1 style='text-align: center; color: #00c6ff;'>محطات الوزن الذكية</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #0072ff;'>محطات الوزن الذكية</h1>", unsafe_allow_html=True)
 
-tab1, tab2 = st.tabs(["🔍 البحث عن الوصل", "📤 أرشفة وصل جديد"])
+# تعديل أسماء التبويبات حسب طلبك
+tab1, tab2 = st.tabs(["🔍 البحث عن ملف PDF", "📤 أرشفة ملف PDF"])
 
 with tab1:
-    search = st.text_input("📝 اكتب اسم المحطة أو الرقم للبحث:", placeholder="ابحث هنا...")
+    search = st.text_input("📝 اكتب اسم الملف للبحث:", placeholder="ابحث هنا عن ملفات PDF...")
     df = load_data()
     if search:
         results = df[df['الاسم'].str.contains(search, na=False, case=False)]
@@ -126,25 +122,25 @@ with tab1:
                 st.markdown(f'<div class="file-card">📄 <b>{row["الاسم"]}</b></div>', unsafe_allow_html=True)
                 link = get_telegram_download_link(row['file_id'])
                 if link:
-                    st.markdown(f'<a href="{link}" target="_blank" style="text-decoration:none;"><button style="width:100%; background-color:#28a745; color:white; border-radius:10px; border:none; padding:10px; cursor:pointer; font-weight:bold;">⬇️ تحميل المستند</button></a>', unsafe_allow_html=True)
+                    st.markdown(f'<a href="{link}" target="_blank" style="text-decoration:none;"><button style="width:100%; background-color:#28a745; color:white; border-radius:10px; border:none; padding:10px; cursor:pointer; font-weight:bold;">⬇️ تحميل الملف</button></a>', unsafe_allow_html=True)
                 st.write("")
         else:
-            st.warning("⚠️ لا توجد نتائج مطابقة")
+            st.warning("⚠️ لم يتم العثور على ملف بهذا الاسم")
 
 with tab2:
-    st.markdown("### 📤 رفع مستند إلى الأرشيف")
-    up = st.file_uploader("اختر ملف PDF", type=["pdf"])
-    if up and st.button("🚀 حفظ في النظام"):
-        with st.spinner("جاري المزامنة مع تليجرام..."):
+    st.markdown("### 📥 إضافة ملف PDF جديد للأرشيف")
+    up = st.file_uploader("اختر ملف PDF من جهازك", type=["pdf"])
+    if up and st.button("🚀 بدء الأرشفة"):
+        with st.spinner("جاري الحفظ في الأرشيف..."):
             res = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", 
                                 data={'chat_id': CHAT_ID, 'caption': up.name}, 
                                 files={'document': (up.name, up.read())}).json()
             if res.get("ok"):
                 save_to_db(up.name, res['result']['document']['file_id'])
-                st.success("✅ تم الحفظ بنجاح")
+                st.success("✅ تم حفظ الملف بنجاح!")
             else:
-                st.error("❌ فشل الرفع")
+                st.error("❌ حدث خطأ أثناء الرفع")
 
-if st.sidebar.button("🚪 خروج"):
+if st.sidebar.button("🚪 تسجيل الخروج"):
     st.session_state["authenticated"] = False
     st.rerun()
