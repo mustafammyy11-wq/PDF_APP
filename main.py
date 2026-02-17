@@ -1,28 +1,39 @@
 import streamlit as st
-import dropbox
-import time
+import requests
 
-# الرمز الجديد الذي أرسلته لي في رسالتك الأخيرة
-TOKEN = "sl.u.AGRMW3ytxebJSsw0BX96dy0VoF0Zmi3IZWyjxUXmulyYyfPpBbUKk3nUbJ3GeaAnaLI9o4fMvk-_PsmXcbbcbO-8ATGYuBnJjOUTjPih33q46vR38ZbJ_Ti-8YG_3-9sj48Q9bkhPdSNPA3_ikeYjtCsxDrzEOI5mLdlPPK6vB6dhum4s4n0-5NfJwoIEaSpxOxSwy1I402jtdOGzof5QGSpUhjBUDLoPSNHwkYSxfPVFAvDGWBMylN2U9RTakATU93phWKHKZJ2lkRl5BXQTENexW-h1eaujqwSkVwAdYPTOuQ0KDsxbiA7O-u6Aae8aet1NNP7xrix9Bt9D9aIIek84wT62BqIhcBwGFmjzp_BZHUh7qi4Y2HPuxQMtwXrzwNfWDEwyc6HTkL-kCJejtEkhtTlc5IOWMZtM3OyIHcSiWzTNxfcPHy7ZSkpJuwJj-loFjReX3hUSYDUfmzBoqWKQd-6J9Mem0zq6FAK4mV2IocwBU1wKetPZABhVt_h96rgLKDhV6tT3FvWWmfv6Bu70HsxR16sTtYgaogp6WhkVJgaXKBBBoHE8vHuyIyw1qdzI5EKO6_aDmJJr9aEtsQHWMuAMv7FYvmoRdtABjQJG17e3J9AGWZHEoXpEcjBLj6oky9zHKrNSWUFs43na6m66AgTYK7Uld4ClqMp6gXu_d5WKgtisWIOuEzEwcXdnCbOkyDVlCmttKcMeXse0eferVoZw6W8Ba2Liuvh4PKSEp7o6AcKqSVe6u3y70M-WdtYXqaYPdz1IF5KAeiJYbzUjBl15uzm2oNaXJ4V56x9sePd1OhGiSquGnPUecei4A1gZA76H5nhAUyx64YwyWoaW8105yD-E8-QsliDoK70PfFtwkzgcLk_F4l9PZ2tkoWrf8lWhojh7MWTNT_d3OtsYno8zLRR2sDKmZwgwj4s55m2bg3kTnjI5kQrKMfh3p0k8gQEMnmGLNxI4vX7OEC8RAohLuPMfTTmMI_DpU0UwQKX6ux4tVxzvta1EPeRtmLbvvUcdkpcnQ5JRSU03dsZrrBqnvu10Gbttf60xEGOkpWsRqYgaOpyWgJd0pvPaSIxKRqWRUKe4c_CR_l1AiU3q1CfrXxwm8mBDtOtwFZi9pkXkkmOTzeB9WKl52Pg6OkGUA7_1Pks4jNF1ZJ44pPHgoJiikMIZgtixXIaWAJ48foqwuL4kvg3lg9iRsoHJsZOvJNHM6UcS1lXXxQNhP97KZ1MGyfhMh_kkADFepJ8ry6nz91NOD70XOYpJAR8aBe0dwSL1EkoVacq-4O2sJmsOV5hBUvPtXo-TltVrRF9zBdON1rc83xaZ2QGZJPb-6nka0CkZ-N6nZewuE1IOJ6eWURnvYhrzz9hsDyREb2iHOzIpKco3oWEkg-R6wwGI243F4lCoB0AAvpLcpxTRvTXiFUe828UY2S9gnGHWYonouU3R_WpbEn6V3z4Y9aNGbw"
+# البيانات المستخرجة من صورك
+BOT_TOKEN = "8388457454:AAE9RHsufjtZ-ZYnKOlKy4Z5q56IRM5Z4Cc"
+CHAT_ID = "-1003555343193"
 
-st.set_page_config(page_title="أرشيف مصطفى الجديد")
-st.title("🏛️ نظام أرشفة مصطفى")
+st.set_page_config(page_title="أرشيف مصطفى - تليجرام", layout="wide")
 
-up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
+st.title("🏛️ نظام أرشفة مصطفى (تليجرام)")
+st.success("✅ النظام متصل الآن بمساحة تخزين غير محدودة")
 
-if up and st.button("🚀 رفع الملف"):
+# --- قسم الرفع ---
+st.subheader("📤 رفع مستند جديد")
+uploaded_file = st.file_uploader("اختر ملف PDF:", type=["pdf"])
+
+if uploaded_file and st.button("🚀 حفظ في الأرشيف"):
     try:
-        # استخدام .strip() لإزالة أي مسافات زائدة من النسخ
-        dbx = dropbox.Dropbox(TOKEN.strip())
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
+        # تجهيز الملف مع اسمه الأصلي
+        files = {'document': (uploaded_file.name, uploaded_file.read())}
+        data = {'chat_id': CHAT_ID, 'caption': f"📄 ملف: {uploaded_file.name}"}
         
-        # تسمية الملف برقم الوقت لضمان النجاح التام وتفادي الأسماء العربية
-        safe_name = f"/doc_{int(time.time())}.pdf"
+        with st.spinner("جاري النقل إلى مخزن تليجرام..."):
+            response = requests.post(url, data=data, files=files)
         
-        with st.spinner("جاري الرفع..."):
-            dbx.files_upload(up.read(), safe_name, mode=dropbox.files.WriteMode.overwrite)
-            
-        st.success("✅ مبروك يا مصطفى! تم الرفع بنجاح.")
-        st.balloons()
-        
+        if response.status_code == 200:
+            st.success(f"✅ تم حفظ '{uploaded_file.name}' بنجاح!")
+            st.balloons()
+        else:
+            st.error("❌ فشل الرفع، تأكد من اتصال الإنترنت.")
     except Exception as e:
         st.error(f"❌ حدث خطأ: {e}")
+
+st.divider()
+
+# --- قسم البحث ---
+st.subheader("🔍 البحث عن الملفات")
+st.info("للبحث عن ملفاتك، افتح قناتك (ارشيف مصطفى) في تليجرام واستخدم زر البحث 🔍 المدمج هناك.")
