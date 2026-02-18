@@ -10,67 +10,62 @@ DB_FILE = "files_db.csv"
 
 st.set_page_config(page_title="محطات الوزن الذكية", page_icon="🚚", layout="centered")
 
-# --- تنسيق CSS لجعل الواجهة احترافية ومرتبة ---
+# --- حل مشكلة الألوان المختفية في الموبايل ---
 st.markdown("""
     <style>
-    /* جعل الخلفية بيضاء بالكامل */
-    .stApp { background-color: #ffffff !important; }
-    
-    /* تنسيق العنوان والشاحنة ليكونوا بجانب بعضهم */
-    .header-style {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        margin-bottom: 20px;
+    /* إجبار الخلفية على اللون الأبيض والنص على الأسود */
+    .stApp {
+        background-color: #ffffff !important;
     }
-    .header-title {
-        color: #0072ff;
-        font-size: 28px;
-        font-weight: bold;
-        margin: 0;
+    h1, h2, h3, p, span, label {
+        color: #2c3e50 !important;
     }
-    .truck-img { width: 50px; }
-
-    /* تنسيق كروت الملفات لتظهر مرتبة */
+    /* تنسيق خانة الباسورد لتكون واضحة */
+    input {
+        color: #000000 !important;
+        background-color: #f0f2f6 !important;
+        border: 1px solid #dcdfe6 !important;
+    }
+    /* تنسيق زر الدخول */
+    .stButton>button {
+        background-color: #0072ff !important;
+        color: white !important;
+        font-weight: bold !important;
+        border-radius: 10px !important;
+    }
+    /* تنسيق كروت الملفات */
     .file-card {
         background-color: #f8f9fa;
-        padding: 12px;
+        padding: 15px;
         border-radius: 10px;
-        border-right: 5px solid #0072ff;
-        margin-bottom: 5px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    /* زر التحميل الأخضر */
-    .download-link {
-        background-color: #28a745;
-        color: white !important;
-        padding: 6px 12px;
-        border-radius: 8px;
-        text-decoration: none;
-        font-weight: bold;
-        font-size: 14px;
+        border-right: 6px solid #0072ff;
+        margin-bottom: 10px;
+        color: #2c3e50 !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- نظام الدخول بكلمة مرور ---
+# --- نظام الحماية (Password) ---
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
 if not st.session_state["authenticated"]:
-    st.markdown("<h2 style='text-align: center;'>🔐 دخول النظام</h2>", unsafe_allow_html=True)
-    pw = st.text_input("كلمة المرور:", type="password")
-    if st.button("دخول"):
+    # عرض أيقونة القفل
+    st.markdown("<h1 style='text-align: center;'>🔐</h1>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center;'>دخول النظام</h2>", unsafe_allow_html=True)
+    
+    # حقل الباسورد مع تسمية واضحة
+    pw = st.text_input("أدخل كلمة المرور الموحدة:", type="password", key="login_pw")
+    
+    if st.button("تسجيل الدخول"):
         if pw == "123":
             st.session_state["authenticated"] = True
             st.rerun()
+        else:
+            st.error("❌ كلمة المرور غير صحيحة")
     st.stop()
 
-# --- الدوال الأساسية ---
+# --- الدوال البرمجية ---
 def load_db():
     if os.path.exists(DB_FILE):
         return pd.read_csv(DB_FILE)
@@ -82,18 +77,16 @@ def save_db(name, f_id):
     df = pd.concat([df, new_data], ignore_index=True)
     df.to_csv(DB_FILE, index=False)
 
-def get_file_url(f_id):
+def get_url(f_id):
     try:
         res = requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={f_id}").json()
-        if res.get("ok"):
-            return f"https://api.telegram.org/file/bot{BOT_TOKEN}/{res['result']['file_path']}"
+        return f"https://api.telegram.org/file/bot{BOT_TOKEN}/{res['result']['file_path']}"
     except: return None
-    return None
 
-# --- الواجهة الرئيسية (التنسيق المرتب) ---
-st.markdown("""
-    <div class="header-style">
-        <p class="header-title">محطات الوزن الذكية</p>
+# --- الواجهة الرئيسية بعد الدخول ---
+st.markdown(f"""
+    <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
+        <h1 style="color: #0072ff !important; margin: 0;">محطات الوزن الذكية</h1>
         <span style="font-size: 40px;">🚚</span>
     </div>
     """, unsafe_allow_html=True)
@@ -103,31 +96,21 @@ tab1, tab2 = st.tabs(["🔍 البحث عن ملف PDF", "📤 أرشفة ملف
 with tab1:
     search_q = st.text_input("🔎 اكتب الاسم للبحث:", placeholder="مثلاً: صفاء")
     df = load_db()
-    
     if search_q:
         results = df[df['الاسم'].str.contains(search_q, na=False, case=False)]
-        
         if not results.empty:
             for _, row in results.iterrows():
-                # جلب الرابط لعرض الزر فوراً
-                d_url = get_file_url(row['file_id']) if pd.notna(row['file_id']) else None
-                
-                # ترتيب الصف: الاسم جهة اليمين والزر جهة اليسار
-                col_name, col_btn = st.columns([3, 1])
-                with col_name:
-                    st.markdown(f'<div style="padding:10px;">📄 {row["الاسم"]}</div>', unsafe_allow_html=True)
-                with col_btn:
-                    if d_url:
-                        st.markdown(f'<a href="{d_url}" target="_blank" class="download-link">⬇️ تحميل</a>', unsafe_allow_html=True)
-                    else:
-                        st.caption("غير متاح")
-                st.divider()
+                d_url = get_url(row['file_id']) if pd.notna(row['file_id']) else None
+                st.markdown(f'<div class="file-card">📄 {row["الاسم"]}</div>', unsafe_allow_html=True)
+                if d_url:
+                    st.markdown(f'<a href="{d_url}" target="_blank" style="text-decoration:none;"><button style="width:100%; background-color:#28a745; color:white; border:none; padding:10px; border-radius:8px; cursor:pointer; font-weight:bold;">⬇️ تحميل الملف</button></a>', unsafe_allow_html=True)
+                st.write("---")
         else:
-            st.warning("⚠️ لا توجد نتائج مطابقة")
+            st.warning("⚠️ لا توجد نتائج")
 
 with tab2:
-    f_up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
-    if f_up and st.button("🚀 حفظ في الأرشيف"):
+    f_up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
+    if f_up and st.button("🚀 حفظ الملف الآن"):
         with st.spinner("جاري الرفع..."):
             res = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", 
                                 data={'chat_id': CHAT_ID, 'caption': f_up.name}, 
