@@ -1,113 +1,69 @@
 import streamlit as st
-import requests
-import pandas as pd
-import os
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
+import io
 
-# --- الإعدادات ---
-BOT_TOKEN = "8388457454:AAE9RHsufjtZ-ZYnKOlKy4Z5q56IRM5Z4Cc"
-CHAT_ID = "-1003555343193"
-DB_FILE = "files_db.csv"
+# معرف المجلد الدقيق (تم تنظيفه من أي مسافات)
+FID = "1-2fiKxjnbAWlIFSNVxxdoqYEa0KuuBmh".strip()
 
-st.set_page_config(page_title="تطبيق محطات الوزن", page_icon="🚚", layout="centered")
+MAIL = "mustafairaq@project-e4fb2fde-9291-482a-b14.iam.gserviceaccount.com"
+PK = r"""-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDcufrbwTEdJ81n
+xso1o/FzJ8XD7o83BVg4Y9qJ3gCkXpnXWkyFtqSHdcBDlGt370RRxDpuQxdrhKcN
+psEUKPm8woTRq0u67OZnDlJHR7w2eFeris562xfDHCgGH8yhX+P39w5p8hMUyBmp
+6pZoyAE4zVGHTqvKmMLgJGp4S6NpQusui68IfV+umcf+QifwaglCfWIuOjjBm/9G
+W5lqOElJSaNwrQoJZMrZqSYxCELQ3LAI+xwBZnMBm7Aisqs7G/zRM3J610zDXX0X
+UQc3Y/HFK+3jGbuZsIpwBI+VnmII5D+YEseN1ADzyjr6bVIN6hvWIxSVb6x3vZ14
+mDoAKTttAgMBAAECggEAJo9S9LsOUnKWnq+Kuc43Kw/iq7TsTgdf/xHqprUi1ZQ1
+OfrrbVyX55Y5jVTLZXtmKwal0odj+wOEj4z3JAd4gXJV868CHtit84j79Lnidn2V
+i0FHiwzlXM95aoB5piNzVulRGk8Q6EuAuD9kIU/3bq3ntUSYHF+Ng8y40OUd2hBk
+hWsKOFHCMqLk0Dzx2R2LfgpdOwEiEKCC4Qwp/sSOWROeQ75jXkxMMI0eMplsfFmA
+Nag52aSw41ZAHFGEs/336Yydl+4SArsJd/p9pQ7Yg8FTJo+v3rvEHKSjOqMSnXXC
+EQ6MQm0eYyF//xW3QUMJ6uwiB9nVw1o08zy/+sPM4QKBgQD7+UemBYX0tHXkfbAk
+O316+seEk+vpWqzz8TYHAE941ciaMQe4/Rs13lzWd2TvyIR+VBq3bTUYSvNjc+4B
+aVs8iaB51L4Ud/qmb+imX6Ul9iQsOZxFv152qHVvxmnd1l8OO9e1GWKYTXFBLjHn
+72H/A4b3NnLA2ka7PFEZQvXh2QKBgQDgQOFkDbjdhMruL/fF5vq37HwUzSq2ISKe
+F2MsQJNld3ZoULyRipWYXIM7uCA/eP6hNmYBTaKBr7kDzHLCEY2u08J7sFMWx/9a
+sIgSJUGtz3sooe+e/GIRcedFNiqVOUl60S6tdIYkBXKCEbBT2WNN0HwHdWVOPbJx
+r/9qFz/VtQKBgQC8m7ul6jx7DxmwDuTqOh2TEGSIOLE920Ha15M5amIScPPXdxvw
+vITBrdCQOI61bcK/TPUyl+xGYtQMfZqKM/K3Pc2BZF1jtOtJ6jqbTryvza8F65mu
+G7D54N8G694Sz4QXg3PTe0zx9AXyZEG2+ti/qkQ8h+UdtkV7oYqS/ixPAQKBgDwX
+Bo5B4wxwndPvRIxiFUKdeq40P8Kn5FfKWoesEhL5TOAs6ipxoR4/g+bHstRvPoPC
+SNkGjYoEpSXwbbu06mszUQTFva34D2OktAFwvEWvuAeuRMAsTrbv95GjLwvnWtov
+HTvbYmpaj1FtHfuJ38MlH2b8PRYXEC7Igz9RVYiVAoGAImaNeSPbdKLfTG90gNrP
+j2DdcC/JgJKgPECqjKokgkevgZPQcs449+OcxxtrB/n+bf2tJCrUTiO6lvxi2gvU
+4bccccv4fBMmkGYHsHsph+qNGiwPaKz6TmypAcspIGM06ajVLH1zLzw8EfDFHUu0
+FzuPgWBddTbzyAfiPYFwGW8=
+-----END PRIVATE KEY-----"""
 
-# --- تنسيق الواجهة البيضاء (UI) ---
-st.markdown("""
-    <style>
-    .stApp { background-color: #ffffff !important; color: #2c3e50 !important; }
-    .main-btn {
-        display: block; width: 100%; text-align: center;
-        background-color: #28a745; color: white !important;
-        padding: 10px; border-radius: 8px;
-        text-decoration: none; font-weight: bold; margin-top: 5px;
-    }
-    .file-card {
-        background-color: #f1f3f5; padding: 15px;
-        border-radius: 10px; border-right: 5px solid #0072ff;
-        margin-top: 15px; margin-bottom: 5px;
-        font-size: 18px; font-weight: bold; color: #2c3e50;
-    }
-    .search-info { color: #7f8c8d; font-size: 14px; margin-bottom: 20px; }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- نظام الحماية ---
-if "authenticated" not in st.session_state:
-    st.session_state["authenticated"] = False
-
-if not st.session_state["authenticated"]:
-    st.markdown("<h2 style='text-align: center;'>🔐 نظام محطات الوزن</h2>", unsafe_allow_html=True)
-    password = st.text_input("كلمة المرور:", type="password")
-    if st.button("دخول"):
-        if password == "123":
-            st.session_state["authenticated"] = True
-            st.rerun()
-    st.stop()
-
-# --- الدوال ---
-def load_data():
-    if os.path.exists(DB_FILE):
-        try:
-            return pd.read_csv(DB_FILE)
-        except:
-            return pd.DataFrame(columns=["الاسم", "file_id"])
-    return pd.DataFrame(columns=["الاسم", "file_id"])
-
-def save_to_db(name, file_id):
-    df = load_data()
-    new_entry = pd.DataFrame({"الاسم": [name], "file_id": [file_id]})
-    df = pd.concat([df, new_entry], ignore_index=True)
-    df.to_csv(DB_FILE, index=False)
-
-def get_download_url(f_id):
+st.title("🏛️ نظام الأرشفة")
+if st.sidebar.text_input("رمز الدخول:", type="password") == "123":
     try:
-        res = requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={f_id}").json()
-        if res.get("ok"):
-            return f"https://api.telegram.org/file/bot{BOT_TOKEN}/{res['result']['file_path']}"
-    except: return None
-    return None
-
-# --- الواجهة الرئيسية ---
-st.markdown('<div style="text-align:right; font-size:40px;">🚚</div>', unsafe_allow_html=True)
-st.markdown("<h1 style='text-align: center; color: #0072ff;'>محطات الوزن الذكية</h1>", unsafe_allow_html=True)
-
-tab1, tab2 = st.tabs(["🔍 البحث عن ملف PDF", "📤 أرشفة ملف PDF"])
-
-with tab1:
-    search = st.text_input("🔎 اكتب الاسم للبحث (مثلاً: صفاء):")
-    st.markdown('<p class="search-info">سيتم عرض جميع الملفات التي تحتوي على الكلمة المكتوبة.</p>', unsafe_allow_html=True)
-    
-    df = load_data()
-    
-    if search:
-        # البحث عن أي اسم يحتوي على نص البحث (بدون الحساسية لحالة الأحرف)
-        results = df[df['الاسم'].str.contains(search, na=False, case=False)]
+        creds = service_account.Credentials.from_service_account_info({
+            "type": "service_account", "project_id": "project-e4fb2fde-9291-482a-b14",
+            "private_key": PK, "client_email": MAIL, "token_uri": "https://oauth2.googleapis.com/token"
+        })
+        service = build('drive', 'v3', credentials=creds)
         
-        if not results.empty:
-            st.success(f"تم العثور على ({len(results)}) ملفات مرتبطة بـ '{search}'")
-            for i, row in results.iterrows():
-                # عرض كرت لكل ملف موجود في النتائج
-                st.markdown(f'<div class="file-card">📄 {row["الاسم"]}</div>', unsafe_allow_html=True)
-                
-                if pd.notna(row['file_id']):
-                    d_url = get_download_url(row['file_id'])
-                    if d_url:
-                        st.markdown(f'<a href="{d_url}" target="_blank" class="main-btn">⬇️ تحميل ملف {row["الاسم"]}</a>', unsafe_allow_html=True)
-                else:
-                    st.warning("⚠️ ملف قديم - لا يتوفر زر تحميل")
-        else:
-            st.error(f"❌ لا توجد ملفات تحتوي على اسم '{search}'")
-
-with tab2:
-    st.subheader("إضافة ملف PDF جديد")
-    up = st.file_uploader("اختر الملف", type=["pdf"])
-    if up and st.button("🚀 بدء الأرشفة"):
-        with st.spinner("جاري الرفع..."):
-            res = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", 
-                                data={'chat_id': CHAT_ID, 'caption': up.name}, 
-                                files={'document': (up.name, up.read())}).json()
-            if res.get("ok"):
-                f_id = res['result']['document']['file_id']
-                save_to_db(up.name, f_id)
-                st.success(f"✅ تم حفظ الملف '{up.name}' بنجاح!")
-            else:
-                st.error("فشل الرفع")
+        up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
+        if up and st.button("🚀 رفع الآن"):
+            with st.spinner("جاري الرفع للمجلد..."):
+                try:
+                    meta = {'name': up.name, 'parents': [FID]}
+                    media = MediaIoBaseUpload(io.BytesIO(up.read()), mimetype='application/pdf')
+                    
+                    # الرفع للمجلد المشترك
+                    file = service.files().create(
+                        body=meta, 
+                        media_body=media, 
+                        supportsAllDrives=True,
+                        fields='id'
+                    ).execute()
+                    
+                    st.success("✅ مبروك! الملف الآن داخل مجلد 'الجديد'.")
+                    st.balloons()
+                except Exception as e:
+                    st.error(f"تأكد من تحديث صفحة درايف ومشاركة المجلد: {e}")
+    except Exception as e:
+        st.error(f"خطأ: {e}")
