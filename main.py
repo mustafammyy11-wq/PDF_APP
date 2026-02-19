@@ -10,32 +10,48 @@ DB_FILE = "files_db.csv"
 
 st.set_page_config(page_title="محطات الوزن الذكية", page_icon="🚚", layout="centered")
 
-# --- التنسيق البصري (ألوان واضحة جداً) ---
+# --- تنسيق الألوان وإجبار الأزرار على الأبيض ---
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff !important; }
+    
+    /* جعل كل النصوص سوداء */
     h1, h2, h3, p, span, label, div { color: #000000 !important; }
-    .header-box { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; }
-    .main-title { color: #0072ff !important; font-size: 26px !important; font-weight: bold; margin: 0; }
-    .file-card { background-color: #f8f9fa; padding: 15px; border-radius: 10px; border-right: 6px solid #0072ff; margin-bottom: 10px; }
-    /* تنسيق زر التحميل */
-    .dl-btn {
-        display: block; width: 100%; text-align: center;
-        background-color: #28a745; color: white !important;
-        padding: 12px; border-radius: 10px;
-        text-decoration: none; font-weight: bold; margin-top: 5px;
+    
+    /* تنسيق كروت الملفات */
+    .file-card { 
+        background-color: #f8f9fa; padding: 15px; border-radius: 10px; 
+        border-right: 6px solid #0072ff; margin-bottom: 5px; 
+    }
+
+    /* تنسيق زر التحميل - إجبار اللون الأبيض للنص */
+    div.stButton > button {
+        background-color: #28a745 !important;
+        color: #ffffff !important;
+        border-radius: 10px !important;
+        width: 100% !important;
+        font-weight: bold !important;
+        height: 3.5em !important;
+        border: none !important;
+    }
+    
+    /* تنسيق حقول الإدخال */
+    input {
+        color: #000000 !important;
+        background-color: #ffffff !important;
+        border: 1px solid #0072ff !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- نظام تسجيل الدخول (كما هو) ---
+# --- نظام تسجيل الدخول ---
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
 if not st.session_state["authenticated"]:
     st.markdown("<h2 style='text-align: center;'>🔐 دخول النظام</h2>", unsafe_allow_html=True)
     pw = st.text_input("كلمة المرور:", type="password")
-    if st.button("تسجيل الدخول"):
+    if st.button("تسجيل الدخول", key="login_btn"):
         if pw == "123":
             st.session_state["authenticated"] = True
             st.rerun()
@@ -53,17 +69,20 @@ def save_db(name, f_id):
     df = pd.concat([df, new_data], ignore_index=True)
     df.to_csv(DB_FILE, index=False)
 
-def get_url(f_id):
+# دالة لتحميل الملف فعلياً للحفاظ على الاسم
+def download_file_logic(file_id, file_name):
     try:
-        res = requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={f_id}").json()
+        res = requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={file_id}").json()
         if res.get("ok"):
-            return f"https://api.telegram.org/file/bot{BOT_TOKEN}/{res['result']['file_path']}"
+            file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{res['result']['file_path']}"
+            file_content = requests.get(file_url).content
+            return file_content
     except: return None
 
 # --- الواجهة الرئيسية ---
-st.markdown(f"""
-    <div class="header-box">
-        <h1 class="main-title">محطات الوزن الذكية</h1>
+st.markdown("""
+    <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px;">
+        <h1 style="color: #0072ff !important; margin: 0;">محطات الوزن الذكية</h1>
         <span style="font-size: 40px;">🚚</span>
     </div>
     """, unsafe_allow_html=True)
@@ -77,14 +96,21 @@ with tab1:
     if search_q:
         results = df[df['الاسم'].str.contains(search_q, na=False, case=False)]
         if not results.empty:
-            for _, row in results.iterrows():
+            for i, row in results.iterrows():
                 file_name = row['الاسم']
                 st.markdown(f'<div class="file-card">📄 {file_name}</div>', unsafe_allow_html=True)
                 
-                d_url = get_url(row['file_id']) if pd.notna(row['file_id']) else None
-                if d_url:
-                    # إضافة خاصية download="{file_name}" تجبر المتصفح على الحفظ بنفس الاسم الأصلي
-                    st.markdown(f'<a href="{d_url}" download="{file_name}" target="_blank" class="dl-btn">⬇️ تحميل ملف {file_name}</a>', unsafe_allow_html=True)
+                # استخدام مكون streamlit الأصلي للتحميل لضمان الاسم الصحيح
+                if pd.notna(row['file_id']):
+                    file_bytes = download_file_logic(row['file_id'], file_name)
+                    if file_bytes:
+                        st.download_button(
+                            label=f"⬇️ تحميل ملف {file_name}",
+                            data=file_bytes,
+                            file_name=file_name if file_name.endswith(".pdf") else f"{file_name}.pdf",
+                            mime="application/pdf",
+                            key=f"dl_{i}"
+                        )
                 st.write("")
         else: st.warning("⚠️ لا توجد نتائج.")
 
