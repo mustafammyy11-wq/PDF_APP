@@ -10,65 +10,41 @@ DB_FILE = "files_db.csv"
 
 st.set_page_config(page_title="محطات الوزن الذكية", page_icon="🚚", layout="centered")
 
-# --- حل مشكلة الألوان المختفية في الموبايل ---
+# --- التنسيق البصري (ألوان واضحة جداً) ---
 st.markdown("""
     <style>
-    /* إجبار الخلفية على اللون الأبيض والنص على الأسود */
-    .stApp {
-        background-color: #ffffff !important;
-    }
-    h1, h2, h3, p, span, label {
-        color: #2c3e50 !important;
-    }
-    /* تنسيق خانة الباسورد لتكون واضحة */
-    input {
-        color: #000000 !important;
-        background-color: #f0f2f6 !important;
-        border: 1px solid #dcdfe6 !important;
-    }
-    /* تنسيق زر الدخول */
-    .stButton>button {
-        background-color: #0072ff !important;
-        color: white !important;
-        font-weight: bold !important;
-        border-radius: 10px !important;
-    }
-    /* تنسيق كروت الملفات */
-    .file-card {
-        background-color: #f8f9fa;
-        padding: 15px;
-        border-radius: 10px;
-        border-right: 6px solid #0072ff;
-        margin-bottom: 10px;
-        color: #2c3e50 !important;
+    .stApp { background-color: #ffffff !important; }
+    h1, h2, h3, p, span, label, div { color: #000000 !important; }
+    .header-box { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; }
+    .main-title { color: #0072ff !important; font-size: 26px !important; font-weight: bold; margin: 0; }
+    .file-card { background-color: #f8f9fa; padding: 15px; border-radius: 10px; border-right: 6px solid #0072ff; margin-bottom: 10px; }
+    /* تنسيق زر التحميل */
+    .dl-btn {
+        display: block; width: 100%; text-align: center;
+        background-color: #28a745; color: white !important;
+        padding: 12px; border-radius: 10px;
+        text-decoration: none; font-weight: bold; margin-top: 5px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- نظام الحماية (Password) ---
+# --- نظام تسجيل الدخول (كما هو) ---
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
 if not st.session_state["authenticated"]:
-    # عرض أيقونة القفل
-    st.markdown("<h1 style='text-align: center;'>🔐</h1>", unsafe_allow_html=True)
-    st.markdown("<h2 style='text-align: center;'>دخول النظام</h2>", unsafe_allow_html=True)
-    
-    # حقل الباسورد مع تسمية واضحة
-    pw = st.text_input("أدخل كلمة المرور الموحدة:", type="password", key="login_pw")
-    
+    st.markdown("<h2 style='text-align: center;'>🔐 دخول النظام</h2>", unsafe_allow_html=True)
+    pw = st.text_input("كلمة المرور:", type="password")
     if st.button("تسجيل الدخول"):
         if pw == "123":
             st.session_state["authenticated"] = True
             st.rerun()
-        else:
-            st.error("❌ كلمة المرور غير صحيحة")
+        else: st.error("كلمة المرور خطأ")
     st.stop()
 
-# --- الدوال البرمجية ---
+# --- الدوال ---
 def load_db():
-    if os.path.exists(DB_FILE):
-        return pd.read_csv(DB_FILE)
+    if os.path.exists(DB_FILE): return pd.read_csv(DB_FILE)
     return pd.DataFrame(columns=["الاسم", "file_id"])
 
 def save_db(name, f_id):
@@ -80,13 +56,14 @@ def save_db(name, f_id):
 def get_url(f_id):
     try:
         res = requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={f_id}").json()
-        return f"https://api.telegram.org/file/bot{BOT_TOKEN}/{res['result']['file_path']}"
+        if res.get("ok"):
+            return f"https://api.telegram.org/file/bot{BOT_TOKEN}/{res['result']['file_path']}"
     except: return None
 
-# --- الواجهة الرئيسية بعد الدخول ---
+# --- الواجهة الرئيسية ---
 st.markdown(f"""
-    <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
-        <h1 style="color: #0072ff !important; margin: 0;">محطات الوزن الذكية</h1>
+    <div class="header-box">
+        <h1 class="main-title">محطات الوزن الذكية</h1>
         <span style="font-size: 40px;">🚚</span>
     </div>
     """, unsafe_allow_html=True)
@@ -94,27 +71,30 @@ st.markdown(f"""
 tab1, tab2 = st.tabs(["🔍 البحث عن ملف PDF", "📤 أرشفة ملف PDF"])
 
 with tab1:
-    search_q = st.text_input("🔎 اكتب الاسم للبحث:", placeholder="مثلاً: صفاء")
+    search_q = st.text_input("🔎 ابحث عن الاسم (مثل: صفاء):", placeholder="اكتب هنا...")
     df = load_db()
+    
     if search_q:
         results = df[df['الاسم'].str.contains(search_q, na=False, case=False)]
         if not results.empty:
             for _, row in results.iterrows():
+                file_name = row['الاسم']
+                st.markdown(f'<div class="file-card">📄 {file_name}</div>', unsafe_allow_html=True)
+                
                 d_url = get_url(row['file_id']) if pd.notna(row['file_id']) else None
-                st.markdown(f'<div class="file-card">📄 {row["الاسم"]}</div>', unsafe_allow_html=True)
                 if d_url:
-                    st.markdown(f'<a href="{d_url}" target="_blank" style="text-decoration:none;"><button style="width:100%; background-color:#28a745; color:white; border:none; padding:10px; border-radius:8px; cursor:pointer; font-weight:bold;">⬇️ تحميل الملف</button></a>', unsafe_allow_html=True)
-                st.write("---")
-        else:
-            st.warning("⚠️ لا توجد نتائج")
+                    # إضافة خاصية download="{file_name}" تجبر المتصفح على الحفظ بنفس الاسم الأصلي
+                    st.markdown(f'<a href="{d_url}" download="{file_name}" target="_blank" class="dl-btn">⬇️ تحميل ملف {file_name}</a>', unsafe_allow_html=True)
+                st.write("")
+        else: st.warning("⚠️ لا توجد نتائج.")
 
 with tab2:
-    f_up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
-    if f_up and st.button("🚀 حفظ الملف الآن"):
+    f_up = st.file_uploader("اختر ملف PDF للرفع:", type=["pdf"])
+    if f_up and st.button("🚀 حفظ في الأرشيف"):
         with st.spinner("جاري الرفع..."):
             res = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", 
                                 data={'chat_id': CHAT_ID, 'caption': f_up.name}, 
                                 files={'document': (f_up.name, f_up.read())}).json()
             if res.get("ok"):
                 save_db(f_up.name, res['result']['document']['file_id'])
-                st.success("✅ تم الحفظ بنجاح")
+                st.success(f"✅ تم حفظ '{f_up.name}' بنجاح")
