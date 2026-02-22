@@ -3,115 +3,125 @@ import requests
 import pandas as pd
 import time
 
-# --- 1. الإعدادات الأساسية (بياناتك الصحيحة 100%) ---
+# --- 1. الإعدادات (نفس بياناتك السابقة) ---
 BOT_TOKEN = "8388457454:AAE9RHsufjtZ-ZYnKOlKy4Z5q56IRM5Z4Cc"
 CHAT_ID = "-1003555343193"
-# رابط الجسر (Google Script)
 SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwRMcjPfNv5U0BemK6XxzWfugH2TtKxcyKLseM_LvCR6vyuAtBSKi6VMVDiNgfxRkl5NA/exec"
-# معرف الجدول (Google Sheet ID)
 SHEET_ID = "1Y8cnKKctMF54jOcnCLKSH3JhfG5Evsf6OXizPnPXtJk"
-# رابط القراءة المباشر مع إضافة 't' لمنع التخزين المؤقت (Cache)
 SEARCH_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0&t={int(time.time())}"
 
-# --- 2. إعدادات الصفحة والتصميم ---
-st.set_page_config(page_title="أرشيف المحطات الذكي", page_icon="🚚", layout="centered")
+st.set_page_config(page_title="أرشيف المحطات", page_icon="🚚", layout="centered")
 
+# --- 2. تنسيق CSS مخصص للهاتف (لحل مشكلة اختفاء الأزرار والبحث) ---
 st.markdown("""
     <style>
-    .stApp { background-color: #ffffff; }
-    div.stButton > button {
-        background: linear-gradient(90deg, #0072ff 0%, #00c6ff 100%);
-        color: white; font-weight: bold; border-radius: 10px; width: 100%; border: none; height: 3em;
+    /* جعل الخلفية بيضاء تماماً */
+    .stApp { background-color: #FFFFFF; }
+    
+    /* تنسيق شريط البحث ليكون واضحاً جداً */
+    .stTextInput input {
+        border: 2px solid #0072ff !important;
+        border-radius: 15px !important;
+        padding: 15px !important;
+        font-size: 18px !important;
+        background-color: #f0f2f6 !important;
+        color: #000000 !important;
     }
-    div.stDownloadButton > button {
-        background-color: #28a745 !important; color: white !important;
-        font-weight: bold; border-radius: 10px; width: 100%; border: none;
+    
+    /* تنسيق الأزرار لتكون ملونة وواضحة دائماً */
+    .stButton > button {
+        background: #0072ff !important;
+        color: white !important;
+        border-radius: 12px !important;
+        border: none !important;
+        font-weight: bold !important;
+        height: 50px !important;
+        width: 100% !important;
+        display: block !important;
+        margin-top: 10px !important;
     }
+    
+    /* تنسيق التبويبات (Tabs) لتكون واضحة */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 5px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        background-color: #e9ecef;
+        border-radius: 8px;
+        color: #495057;
+        font-weight: bold;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #0072ff !important;
+        color: white !important;
+    }
+
+    /* كروت عرض النتائج */
     .file-card { 
-        background-color: #f1f3f5; padding: 15px; border-radius: 10px; 
-        border-right: 5px solid #0072ff; margin-bottom: 10px; color: #1a1a1a;
+        background-color: #f8f9fa; padding: 20px; border-radius: 15px; 
+        border-right: 8px solid #0072ff; margin-bottom: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: #000;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. نظام الدخول ---
+# --- 3. الدخول ---
 if "auth" not in st.session_state: st.session_state.auth = False
 if not st.session_state.auth:
-    st.markdown("<h2 style='text-align: center;'>🔐 نظام الأرشفة</h2>", unsafe_allow_html=True)
-    pw = st.text_input("أدخل الرمز السري الخاص بالمحطة:", type="password")
-    if st.button("تسجيل الدخول"):
-        if pw == "123":
-            st.session_state.auth = True
-            st.rerun()
-        else: st.error("❌ الرمز غير صحيح")
+    st.markdown("<h2 style='text-align: center; color: #0072ff;'>🚚 دخول النظام</h2>", unsafe_allow_html=True)
+    pw = st.text_input("رمز الدخول:", type="password")
+    if st.button("دخول"):
+        if pw == "123": st.session_state.auth = True; st.rerun()
+        else: st.error("❌ الرمز خطأ")
     st.stop()
 
-# --- 4. واجهة التطبيق الرئيسية ---
-st.markdown("<h1 style='text-align:center; color:#0072ff;'>🚚 نظام أرشفة المحطات</h1>", unsafe_allow_html=True)
-tab1, tab2 = st.tabs(["🔍 البحث عن الكتب والقرارات", "📤 أرشفة ملف جديد"])
+# --- 4. الواجهة الرئيسية ---
+st.markdown("<h1 style='text-align:center; color:#0072ff; margin-bottom: 20px;'>🚚 نظام أرشفة المحطات</h1>", unsafe_allow_html=True)
 
-# --- تبويب البحث ---
+tab1, tab2 = st.tabs(["🔍 البحث السريع", "📤 إضافة كتاب"])
+
 with tab1:
-    search_q = st.text_input("🔎 اكتب اسم الملف للبحث عنه:")
+    st.markdown("### 🔎 ابحث عن اسم الكتاب:")
+    # شريط البحث الآن واضح وبارز
+    search_q = st.text_input("", placeholder="اكتب هنا.. (مثلاً: كباشي، قرار، توجيه)", key="main_search")
     
     try:
-        # قراءة البيانات
         df = pd.read_csv(SEARCH_URL)
-        df.columns = df.columns.str.strip() # تنظيف أسماء الأعمدة
+        df.columns = df.columns.str.strip()
         
         if search_q:
-            # البحث في العمود الأول (الأسماء)
-            mask = df.iloc[:, 0].astype(str).str.contains(search_q, na=False, case=False)
-            results = df[mask]
-            
+            results = df[df.iloc[:, 0].astype(str).str.contains(search_q, na=False, case=False)]
             if not results.empty:
-                st.success(f"✅ تم العثور على {len(results)} نتيجة")
+                st.info(f"📍 تم العثور على {len(results)} ملف")
                 for i, row in results.iterrows():
-                    file_name = row.iloc[0]
-                    file_id = row.iloc[1]
-                    
                     with st.container():
-                        st.markdown(f'<div class="file-card">📄 {file_name}</div>', unsafe_allow_html=True)
-                        # جلب الملف من تليجرام
-                        try:
-                            f_info = requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={file_id}").json()
-                            if f_info.get("ok"):
-                                f_path = f_info['result']['file_path']
-                                f_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{f_path}"
-                                file_data = requests.get(f_url).content
-                                st.download_button(label=f"⬇️ تحميل {file_name}", data=file_data, file_name=f"{file_name}.pdf", key=f"btn_{i}")
-                        except:
-                            st.error("⚠️ عذراً، تعذر جلب الملف من تليجرام.")
+                        st.markdown(f'<div class="file-card">📄 {row.iloc[0]}</div>', unsafe_allow_html=True)
+                        f_info = requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={row.iloc[1]}").json()
+                        if f_info.get("ok"):
+                            f_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{f_info['result']['file_path']}"
+                            st.download_button("⬇️ تحميل الملف الآن", requests.get(f_url).content, file_name=f"{row.iloc[0]}.pdf", key=f"dl_{i}")
             else:
-                st.warning("⚠️ لا توجد نتائج مطابقة، تأكد من كتابة الاسم بشكل صحيح.")
+                st.warning("⚠️ لا توجد نتائج لهذا الاسم.")
         else:
-            st.info("💡 الأرشيف جاهز، اكتب أي كلمة للبحث في الملفات المرفوعة.")
-            
-    except Exception as e:
-        st.info("📦 الأرشيف بانتظار تحديث البيانات أو إضافة ملفات جديدة.")
+            st.markdown("<p style='text-align:center; color:gray;'>الأرشيف جاهز للبحث في الملفات المرفوعة حالياً.</p>", unsafe_allow_html=True)
+    except:
+        st.info("📦 بانتظار تحديث البيانات...")
 
-# --- تبويب الإضافة ---
 with tab2:
-    st.markdown("### 📤 رفع ملف جديد للأرشفة")
-    f_up = st.file_uploader("اختر ملف PDF:", type=["pdf"])
-    
-    if f_up and st.button("🚀 بدء الأرشفة والمزامنة"):
-        with st.spinner("جاري المزامنة مع تليجرام وجوجل..."):
-            # 1. الرفع إلى تليجرام
-            files = {'document': (f_up.name, f_up.getvalue())}
-            res_tg = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data={'chat_id': CHAT_ID, 'caption': f_up.name}, files=files).json()
-            
+    st.markdown("### 📤 رفع ملف جديد")
+    f_up = st.file_uploader("اختر ملف PDF من الهاتف:", type=["pdf"])
+    if f_up and st.button("🚀 حفظ ومزامنة"):
+        with st.spinner("جاري الرفع..."):
+            res_tg = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", 
+                                   data={'chat_id': CHAT_ID, 'caption': f_up.name}, 
+                                   files={'document': (f_up.name, f_up.read())}).json()
             if res_tg.get("ok"):
-                new_file_id = res_tg['result']['document']['file_id']
-                
-                # 2. إرسال البيانات لجوجل شيت عبر الجسر
-                res_gs = requests.get(f"{SCRIPT_URL}?name={f_up.name}&id={new_file_id}")
-                
-                if res_gs.status_code == 200:
-                    st.success(f"✅ تم حفظ الملف '{f_up.name}' بنجاح في النظام!")
-                    time.sleep(1)
-                    st.rerun()
-                else:
-                    st.error("⚠️ تم رفع الملف لتليجرام ولكن فشل التوثيق في الجدول.")
-            else:
-                st.error("❌ فشل الرفع لتليجرام، تأكد من اتصال الإنترنت.")
+                f_id = res_tg['result']['document']['file_id']
+                requests.get(f"{SCRIPT_URL}?name={f_up.name}&id={f_id}")
+                st.success(f"✅ تم حفظ {f_up.name} بنجاح!")
+                time.sleep(2)
+                st.rerun()rt time
